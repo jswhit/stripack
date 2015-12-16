@@ -2876,7 +2876,6 @@ subroutine edge ( in1, in2, x, y, z, lwk, iwk, list, lptr, lend, ier )
 !  IWL is the number of arcs which intersect N1-N2.
 !  Store LWK.
 !
-9 continue
 
   lwk = iwl
   iwend = iwl
@@ -3167,177 +3166,6 @@ subroutine edge ( in1, in2, x, y, z, lwk, iwk, list, lptr, lend, ier )
 
   return
 end
-subroutine getnp ( x, y, z, list, lptr, lend, l, npts, df, ier )
-
-!*****************************************************************************80
-!
-!! GETNP gets the next nearest node to a given node.
-!
-!  Discussion:
-!
-!    Given a Delaunay triangulation of N nodes on the unit
-!    sphere and an array NPTS containing the indexes of L-1
-!    nodes ordered by angular distance from NPTS(1), this 
-!    routine sets NPTS(L) to the index of the next node in the
-!    sequence -- the node, other than NPTS(1),...,NPTS(L-1),
-!    that is closest to NPTS(1).  Thus, the ordered sequence
-!    of K closest nodes to N1 (including N1) may be determined
-!    by K-1 calls to GETNP with NPTS(1) = N1 and L = 2,3,...,K
-!    for K >= 2.
-!
-!    The algorithm uses the property of a Delaunay triangula-
-!    tion that the K-th closest node to N1 is a neighbor of one
-!    of the K-1 closest nodes to N1.
-!
-!  Modified:
-!
-!    16 June 2007
-!
-!  Author:
-!
-!    Robert Renka
-!
-!  Reference:
-!
-!    Robert Renka,
-!    Algorithm 772: STRIPACK,
-!    Delaunay Triangulation and Voronoi Diagram on the Surface of a Sphere,
-!    ACM Transactions on Mathematical Software,
-!    Volume 23, Number 3, September 1997, pages 416-434.
-!
-!  Parameters:
-!
-!    Input, real ( kind = 8 ) X(N), Y(N), Z(N), the coordinates of the nodes.
-!
-!    Input, integer ( kind = 4 ) LIST(6*(N-2)), LPTR(6*(N-2)), LEND(N), the 
-!    triangulation data structure, created by TRMESH.
-!
-!    Input, integer ( kind = 4 ) L, the number of nodes in the sequence on 
-!    output.  2 <= L <= N.
-!
-!    Input/output, integer ( kind = 4 ) NPTS(L).  On input, the indexes of 
-!    the L-1 closest nodes to NPTS(1) in the first L-1 locations.  On output,
-!    updated with the index of the L-th closest node to NPTS(1) in 
-!    position L unless IER = 1.
-!
-!    Output, real ( kind = 8 ) DF, value of an increasing function (negative
-!    cosine) of the angular distance between NPTS(1) and NPTS(L) unless IER = 1.
-!
-!    Output, integer ( kind = 4 ) IER, error indicator:
-!    0, if no errors were encountered.
-!    1, if L < 2.
-!
-!  Local parameters:
-!
-!    DNB,DNP =  Negative cosines of the angular distances from
-!               N1 to NB and to NP, respectively
-!    I =        NPTS index and DO-loop index
-!    LM1 =      L-1
-!    LP =       LIST pointer of a neighbor of NI
-!    LPL =      Pointer to the last neighbor of NI
-!    N1 =       NPTS(1)
-!    NB =       Neighbor of NI and candidate for NP
-!    NI =       NPTS(I)
-!    NP =       Candidate for NPTS(L)
-!    X1,Y1,Z1 = Coordinates of N1
-!
-  implicit none
-
-  integer ( kind = 4 ) l
-
-  real ( kind = 8 ) df
-  real ( kind = 8 ) dnb
-  real ( kind = 8 ) dnp
-  integer ( kind = 4 ) i
-  integer ( kind = 4 ) ier
-  integer ( kind = 4 ) lend(*)
-  integer ( kind = 4 ) list(*)
-  integer ( kind = 4 ) lp
-  integer ( kind = 4 ) lpl
-  integer ( kind = 4 ) lptr(*)
-  integer ( kind = 4 ) n1
-  integer ( kind = 4 ) nb
-  integer ( kind = 4 ) ni
-  integer ( kind = 4 ) np
-  integer ( kind = 4 ) npts(l)
-  real ( kind = 8 ) x(*)
-  real ( kind = 8 ) x1
-  real ( kind = 8 ) y(*)
-  real ( kind = 8 ) y1
-  real ( kind = 8 ) z(*)
-  real ( kind = 8 ) z1
-
-  if ( l < 2 ) then
-    ier = 1
-    return
-  end if
-
-  ier = 0
-!
-!  Store N1 = NPTS(1) and mark the elements of NPTS.
-!
-  n1 = npts(1)
-  x1 = x(n1)
-  y1 = y(n1)
-  z1 = z(n1)
-
-  do i = 1, l-1
-    ni = npts(i)
-    lend(ni) = -lend(ni)
-  end do
-!
-!  Candidates for NP = NPTS(L) are the unmarked neighbors
-!  of nodes in NPTS.  DNP is initially greater than -cos(PI)
-!  (the maximum distance).
-!
-  dnp = 2.0D+00
-!
-!  Loop on nodes NI in NPTS.
-!
-  do i = 1, l-1
-
-    ni = npts(i)
-    lpl = -lend(ni)
-    lp = lpl
-!
-!  Loop on neighbors NB of NI.
-!
-    do
-
-      nb = abs ( list(lp) )
-!
-!  NB is an unmarked neighbor of NI.  Replace NP if NB is closer to N1.
-!
-      if ( 0 <= lend(nb) ) then
-        dnb = - ( x(nb) * x1 + y(nb) * y1 + z(nb) * z1 )
-        if ( dnb < dnp ) then
-          np = nb
-          dnp = dnb
-        end if
-      end if
-
-      lp = lptr(lp)
-
-      if ( lp == lpl ) then
-        exit
-      end if
-
-    end do
-
-  end do
-
-  npts(l) = np
-  df = dnp
-!
-!  Unmark the elements of NPTS.
-!
-  do i = 1, l-1
-    ni = npts(i)
-    lend(ni) = -lend(ni)
-  end do
-
-  return
-end
 subroutine insert ( k, lp, list, lptr, lnew )
 
 !*****************************************************************************80
@@ -3393,364 +3221,6 @@ subroutine insert ( k, lp, list, lptr, lnew )
   list(lnew) = k
   lptr(lnew) = lsav
   lnew = lnew + 1
-
-  return
-end
-function inside ( p, lv, xv, yv, zv, nv, listv, ier )
-
-!*****************************************************************************80
-!
-!! INSIDE determines if a point is inside a polygonal region.
-!
-!  Discussion:
-!
-!    This function locates a point P relative to a polygonal
-!    region R on the surface of the unit sphere, returning
-!    INSIDE = TRUE if and only if P is contained in R.  R is
-!    defined by a cyclically ordered sequence of vertices which
-!    form a positively-oriented simple closed curve.  Adjacent
-!    vertices need not be distinct but the curve must not be
-!    self-intersecting.  Also, while polygon edges are by definition
-!    restricted to a single hemisphere, R is not so
-!    restricted.  Its interior is the region to the left as the
-!    vertices are traversed in order.
-!
-!    The algorithm consists of selecting a point Q in R and
-!    then finding all points at which the great circle defined
-!    by P and Q intersects the boundary of R.  P lies inside R
-!    if and only if there is an even number of intersection
-!    points between Q and P.  Q is taken to be a point immediately
-!    to the left of a directed boundary edge -- the first
-!    one that results in no consistency-check failures.
-!
-!    If P is close to the polygon boundary, the problem is
-!    ill-conditioned and the decision may be incorrect.  Also,
-!    an incorrect decision may result from a poor choice of Q
-!    (if, for example, a boundary edge lies on the great circle
-!    defined by P and Q).  A more reliable result could be
-!    obtained by a sequence of calls to INSIDE with the vertices
-!    cyclically permuted before each call (to alter the
-!    choice of Q).
-!
-!  Modified:
-!
-!    16 June 2007
-!
-!  Author:
-!
-!    Robert Renka
-!
-!  Reference:
-!
-!    Robert Renka,
-!    Algorithm 772: STRIPACK,
-!    Delaunay Triangulation and Voronoi Diagram on the Surface of a Sphere,
-!    ACM Transactions on Mathematical Software,
-!    Volume 23, Number 3, September 1997, pages 416-434.
-!
-!  Parameters:
-!
-!    Input, real ( kind = 8 ) P(3), the coordinates of the point (unit vector)
-!    to be located.
-!
-!    Input, integer ( kind = 4 ) LV, the length of arrays XV, YV, and ZV.
-!
-!    Input, real ( kind = 8 ) XV(LV), YV(LV), ZV(LV), the coordinates of unit
-!    vectors (points on the unit sphere).  
-!
-!    Input, integer ( kind = 4 ) NV, the number of vertices in the polygon. 
-!    3 <= NV <= LV.
-!
-!    Input, integer ( kind = 4 ) LISTV(NV), the indexes (for XV, YV, and ZV) 
-!    of a cyclically-ordered (and CCW-ordered) sequence of vertices that
-!    define R.  The last vertex (indexed by LISTV(NV)) is followed by the 
-!    first (indexed by LISTV(1)).  LISTV entries must be in the range 1 to LV.
-!
-!    Output, logical INSIDE, TRUE if and only if P lies inside R unless
-!    IER /= 0, in which case the value is not altered.
-!
-!    Output, integer ( kind = 4 ) IER, error indicator:
-!    0, if no errors were encountered.
-!    1, if LV or NV is outside its valid range.
-!    2, if a LISTV entry is outside its valid range.
-!    3, if the polygon boundary was found to be self-intersecting.  This 
-!      error will not necessarily be detected.
-!    4, if every choice of Q (one for each boundary edge) led to failure of 
-!      some internal consistency check.  The most likely cause of this error 
-!      is invalid input:  P = (0,0,0), a null or self-intersecting polygon, etc.
-!
-!  Local parameters:
-!
-!    B =         Intersection point between the boundary and
-!                the great circle defined by P and Q.
-!
-!    BP,BQ =     <B,P> and <B,Q>, respectively, maximized over
-!                intersection points B that lie between P and
-!                Q (on the shorter arc) -- used to find the
-!                closest intersection points to P and Q
-!    CN =        Q X P = normal to the plane of P and Q
-!    D =         Dot product <B,P> or <B,Q>
-!    EPS =       Parameter used to define Q as the point whose
-!                orthogonal distance to (the midpoint of)
-!                boundary edge V1->V2 is approximately EPS/
-!                (2*Cos(A/2)), where <V1,V2> = Cos(A).
-!    EVEN =      TRUE iff an even number of intersection points
-!                lie between P and Q (on the shorter arc)
-!    I1,I2 =     Indexes (LISTV elements) of a pair of adjacent
-!                boundary vertices (endpoints of a boundary
-!                edge)
-!    IERR =      Error flag for calls to INTRSC (not tested)
-!    IMX =       Local copy of LV and maximum value of I1 and I2
-!    K =         DO-loop index and LISTV index
-!    K0 =        LISTV index of the first endpoint of the
-!                boundary edge used to compute Q
-!    LFT1,LFT2 = Logical variables associated with I1 and I2 in
-!                the boundary traversal:  TRUE iff the vertex
-!                is strictly to the left of Q->P (<V,CN> > 0)
-!    N =         Local copy of NV
-!    NI =        Number of intersections (between the boundary
-!                curve and the great circle P-Q) encountered
-!    PINR =      TRUE iff P is to the left of the directed
-!                boundary edge associated with the closest
-!                intersection point to P that lies between P
-!                and Q (a left-to-right intersection as
-!                viewed from Q), or there is no intersection
-!                between P and Q (on the shorter arc)
-!    PN,QN =     P X CN and CN X Q, respectively:  used to
-!                locate intersections B relative to arc Q->P
-!    Q =         (V1 + V2 + EPS*VN/VNRM)/QNRM, where V1->V2 is
-!                the boundary edge indexed by LISTV(K0) ->
-!                LISTV(K0+1)
-!    QINR =      TRUE iff Q is to the left of the directed
-!                boundary edge associated with the closest
-!                intersection point to Q that lies between P
-!                and Q (a right-to-left intersection as
-!                viewed from Q), or there is no intersection
-!                between P and Q (on the shorter arc)
-!    QNRM =      Euclidean norm of V1+V2+EPS*VN/VNRM used to
-!                compute (normalize) Q
-!    V1,V2 =     Vertices indexed by I1 and I2 in the boundary
-!                traversal
-!    VN =        V1 X V2, where V1->V2 is the boundary edge
-!                indexed by LISTV(K0) -> LISTV(K0+1)
-!    VNRM =      Euclidean norm of VN
-!
-  implicit none
-
-  integer ( kind = 4 ) lv
-  integer ( kind = 4 ) nv
-
-  real ( kind = 8 ) b(3)
-  real ( kind = 8 ) bp
-  real ( kind = 8 ) bq
-  real ( kind = 8 ) cn(3)
-  real ( kind = 8 ) d
-  real ( kind = 8 ), parameter :: eps = 0.001D+00
-  logical even
-  integer ( kind = 4 ) i1
-  integer ( kind = 4 ) i2
-  integer ( kind = 4 ) ier
-  integer ( kind = 4 ) ierr
-  integer ( kind = 4 ) imx
-  logical inside
-  integer ( kind = 4 ) k
-  integer ( kind = 4 ) k0
-  logical lft1
-  logical lft2
-  integer ( kind = 4 ) listv(nv)
-  integer ( kind = 4 ) n
-  integer ( kind = 4 ) ni
-  real ( kind = 8 ) p(3)
-  logical pinr
-  real ( kind = 8 ) pn(3)
-  real ( kind = 8 ) q(3)
-  logical qinr
-  real ( kind = 8 ) qn(3)
-  real ( kind = 8 ) qnrm
-  real ( kind = 8 ) v1(3)
-  real ( kind = 8 ) v2(3)
-  real ( kind = 8 ) vn(3)
-  real ( kind = 8 ) vnrm
-  real ( kind = 8 ) xv(lv)
-  real ( kind = 8 ) yv(lv)
-  real ( kind = 8 ) zv(lv)
-!
-!  Store local parameters.
-!
-  imx = lv
-  n = nv
-!
-!  Test for error 1.
-!
-  if ( n < 3 .or. imx < n ) then
-    ier = 1
-    return
-  end if
-!
-!  Initialize K0.
-!
-  k0 = 0
-  i1 = listv(1)
-
-  if ( i1 < 1 .or. imx < i1 ) then
-    ier = 2
-    return
-  end if
-!
-!  Increment K0 and set Q to a point immediately to the left
-!  of the midpoint of edge V1->V2 = LISTV(K0)->LISTV(K0+1):
-!  Q = (V1 + V2 + EPS*VN/VNRM)/QNRM, where VN = V1 X V2.
-!
-1 continue
-
-  k0 = k0 + 1
-
-  if ( n < k0 ) then
-    ier = 4
-    return
-  end if
-
-  i1 = listv(k0)
-
-  if ( k0 < n ) then
-    i2 = listv(k0+1)
-  else
-    i2 = listv(1)
-  end if
-
-  if ( i2 < 1 .or. imx < i2 ) then
-    ier = 2
-    return
-  end if
-
-  vn(1) = yv(i1) * zv(i2) - zv(i1) * yv(i2)
-  vn(2) = zv(i1) * xv(i2) - xv(i1) * zv(i2)
-  vn(3) = xv(i1) * yv(i2) - yv(i1) * xv(i2)
-  vnrm = sqrt ( sum ( vn(1:3)**2 ) )
-
-  if ( vnrm == 0.0D+00 ) then
-    go to 1
-  end if
-
-  q(1) = xv(i1) + xv(i2) + eps * vn(1) / vnrm
-  q(2) = yv(i1) + yv(i2) + eps * vn(2) / vnrm
-  q(3) = zv(i1) + zv(i2) + eps * vn(3) / vnrm
-
-  qnrm = sqrt ( sum ( q(1:3)**2 ) )
-
-  q(1) = q(1) / qnrm
-  q(2) = q(2) / qnrm
-  q(3) = q(3) / qnrm
-!
-!  Compute CN = Q X P, PN = P X CN, and QN = CN X Q.
-!
-  cn(1) = q(2) * p(3) - q(3) * p(2)
-  cn(2) = q(3) * p(1) - q(1) * p(3)
-  cn(3) = q(1) * p(2) - q(2) * p(1)
-
-  if ( cn(1) == 0.0D+00 .and. cn(2) == 0.0D+00  .and. cn(3) == 0.0D+00 ) then
-    go to 1
-  end if
-
-  pn(1) = p(2) * cn(3) - p(3) * cn(2)
-  pn(2) = p(3) * cn(1) - p(1) * cn(3)
-  pn(3) = p(1) * cn(2) - p(2) * cn(1)
-  qn(1) = cn(2) * q(3) - cn(3) * q(2)
-  qn(2) = cn(3) * q(1) - cn(1) * q(3)
-  qn(3) = cn(1) * q(2) - cn(2) * q(1)
-!
-!  Initialize parameters for the boundary traversal.
-!
-  ni = 0
-  even = .true.
-  bp = -2.0D+00
-  bq = -2.0D+00
-  pinr = .true.
-  qinr = .true.
-  i2 = listv(n)
-
-  if ( i2 < 1 .or. imx < i2 ) then
-    ier = 2
-    return
-  end if
-
-  lft2 = 0.0D+00 < cn(1) * xv(i2) + cn(2) * yv(i2) + cn(3) * zv(i2) 
-!
-!  Loop on boundary arcs I1->I2.
-!
-  do k = 1, n
-
-    i1 = i2
-    lft1 = lft2
-    i2 = listv(k)
-
-    if ( i2 < 1 .or. imx < i2 ) then
-      ier = 2
-      return
-    end if
-
-    lft2 = ( 0.0D+00 < cn(1) * xv(i2) + cn(2) * yv(i2) + cn(3) * zv(i2) )
-
-    if ( lft1 .eqv. lft2 ) then
-      cycle
-    end if
-!
-!  I1 and I2 are on opposite sides of Q->P.  Compute the
-!  point of intersection B.
-!
-    ni = ni + 1
-    v1(1) = xv(i1)
-    v1(2) = yv(i1)
-    v1(3) = zv(i1)
-    v2(1) = xv(i2)
-    v2(2) = yv(i2)
-    v2(3) = zv(i2)
-
-    call intrsc ( v1, v2, cn, b, ierr )
-!
-!  B is between Q and P (on the shorter arc) iff
-!  B Forward Q->P and B Forward P->Q       iff
-!  <B,QN> > 0 and 0 < <B,PN>.
-!
-    if ( 0.0D+00 < dot_product ( b(1:3), qn(1:3) ) .and. &
-         0.0D+00 < dot_product ( b(1:3), pn(1:3) ) ) then
-!
-!  Update EVEN, BQ, QINR, BP, and PINR.
-!
-      even = .not. even
-      d = dot_product ( b(1:3), q(1:3) )
-
-      if ( bq < d ) then
-        bq = d
-        qinr = lft2
-      end if
-
-      d = dot_product ( b(1:3), p(1:3) )
-
-      if ( bp < d ) then
-        bp = d
-        pinr = lft1
-      end if
-
-    end if
-
-  end do
-!
-!  Test for consistency:  NI must be even and QINR must be TRUE.
-!
-  if ( ni /= 2 * ( ni / 2 ) .or. .not. qinr ) then
-    go to 1
-  end if
-!
-!  Test for error 3:  different values of PINR and EVEN.
-!
-  if ( pinr .neqv. even ) then
-    ier = 3
-    return
-  end if
-
-  ier = 0
-  inside = even
 
   return
 end
@@ -3922,7 +3392,6 @@ subroutine intrsc ( p1, p2, cn, p, ier )
   real ( kind = 8 ) cn(3)
   real ( kind = 8 ) d1
   real ( kind = 8 ) d2
-  integer ( kind = 4 ) i
   integer ( kind = 4 ) ier
   real ( kind = 8 ) p(3)
   real ( kind = 8 ) p1(3)
@@ -4025,7 +3494,7 @@ function jrand ( n, ix, iy, iz )
     + ( real ( iz, kind = 8 ) / 30323.0D+00 )
 
   u = x - int ( x )
-  jrand = real ( n, kind = 8 ) * u + 1.0D+00
+  jrand = int( real ( n, kind = 8 ) * u + 1.0D+00 )
 
   return
 end
@@ -6081,8 +5550,6 @@ subroutine trlist ( n, list, lptr, lend, nrow, nt, ltri, ier )
         go to 1
       end if
 
-9     continue
-
   end do
 
   nt = kt
@@ -6349,8 +5816,6 @@ subroutine trlist2 ( n, list, lptr, lend, nt, ltri, ier )
       if ( lp2 /= lpln1 ) then
         go to 1
       end if
-
-9     continue
 
   end do
 
@@ -6817,13 +6282,10 @@ subroutine trmesh ( n, x, y, z, list, lptr, lend, ier )
 !
 !  Bottom of loop on neighbors J.
 !
-5   continue
 
     if ( lp /= lpl ) then
       go to 3
     end if
-
-6   continue
 
   end do
 
