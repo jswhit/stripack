@@ -10,4 +10,4 @@ References:
  R. J. Renka, "ALGORITHM 772: STRIPACK: Delaunay triangulation
  and Voronoi diagram on the surface of a sphere"
  ACM Trans. Math. Software, Volume 23 Issue 3, Sept. 1997
- pp 416-434. (http://dl.acm.org/citation.cfm?id=275329)"""
+ pp 416-434. (http://dl.acm.org/citation.cfm?id=275329)
