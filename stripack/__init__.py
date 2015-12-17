@@ -1,6 +1,8 @@
 import  _stripack
 import numpy as np
 
+__version__ = "1.0"
+
 class trmesh(object):
     def __init__(self, lons, lats):
         """
