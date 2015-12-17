@@ -5511,8 +5511,8 @@ end
 SUBROUTINE INTERP (N,NNEIGHBOR,PLAT,PLON,X,Y,Z,W,LIST,LPTR,&
                          LEND, IST, PW, IER)
   logical, intent(in) :: nneighbor
-  INTEGER N, LIST(*), LPTR(*), LEND(N), IST, IER
-  REAL(8)    PLAT, PLON, X(N), Y(N), Z(N), W(N), PW
+  INTEGER( kind = 4 ) N, LIST(*), LPTR(*), LEND(N), IST, IER
+  REAL( kind = 8 )    PLAT, PLON, X(N), Y(N), Z(N), W(N), PW
 !
 !***********************************************************
 !
@@ -5589,8 +5589,8 @@ SUBROUTINE INTERP (N,NNEIGHBOR,PLAT,PLON,X,Y,Z,W,LIST,LPTR,&
 !
 !***********************************************************
 !
-  INTEGER I1, I2, I3, LP, N1, N2
-  REAL(8)    B1, B2, B3, P(3), PTN1, PTN2, S12, SUMM,&
+  INTEGER( kind = 4 ) I1, I2, I3, LP, N1, N2
+  REAL( kind = 8 )    B1, B2, B3, P(3), PTN1, PTN2, S12, SUMM,&
              DIST(3), P1(3), P2(3), P3(3), I(1), ARCLEN
 !
 ! Local parameters:
@@ -5758,8 +5758,8 @@ SUBROUTINE INTERP (N,NNEIGHBOR,PLAT,PLON,X,Y,Z,W,LIST,LPTR,&
    13 IER = -3
       RETURN
       END
-      REAL(8) FUNCTION ARCLEN (P,Q)
-      REAL(8) P(3), Q(3)
+      REAL( kind = 8 ) FUNCTION ARCLEN (P,Q)
+      REAL( kind = 8 ) P(3), Q(3)
 !
 !***********************************************************
 !
@@ -5792,8 +5792,8 @@ SUBROUTINE INTERP (N,NNEIGHBOR,PLAT,PLON,X,Y,Z,W,LIST,LPTR,&
 !
 !***********************************************************
 !
-      INTEGER I
-      REAL(8)    D
+      INTEGER( kind = 4 ) I
+      REAL( kind = 8 )    D
 !
 ! Local parameters:
 !
@@ -5822,15 +5822,15 @@ SUBROUTINE INTERP (N,NNEIGHBOR,PLAT,PLON,X,Y,Z,W,LIST,LPTR,&
 
       subroutine interp_n(npts,nptso,order,olats,olons,x,y,z,datain,lst,&
                            lptr,lend,odata,ierr)
-      integer, intent(in) :: npts, nptso
-      integer, intent(out) :: ierr
-      double precision, intent(in), dimension(nptso) :: olats,olons
-      double precision, intent(in), dimension(npts) :: datain,x,y,z
-      double precision, intent(out), dimension(nptso) :: odata
-      integer, intent(in), dimension(npts) :: lend
-      integer, intent(in), dimension(6*(npts-2)) :: lst,lptr
+      integer( kind = 4 ), intent(in) :: npts, nptso
+      integer( kind = 4 ), intent(out) :: ierr
+      real( kind = 8 ), intent(in), dimension(nptso) :: olats,olons
+      real( kind = 8 ), intent(in), dimension(npts) :: datain,x,y,z
+      real( kind = 8 ), intent(out), dimension(nptso) :: odata
+      integer( kind = 4 ), intent(in), dimension(npts) :: lend
+      integer( kind = 4 ), intent(in), dimension(6*(npts-2)) :: lst,lptr
       logical nn
-      integer n,ierr1,ist
+      integer( kind = 4 ) n,ierr1,ist
       ist = 1
       ierr = 0
       if (order == 0) then

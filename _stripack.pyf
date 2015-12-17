@@ -4,30 +4,30 @@
 python module _stripack ! in 
     interface  ! in :_stripack
         subroutine trans(n,rlat,rlon,x,y,z) ! in :_stripack:_stripack.f90
-            integer, intent(in) :: n
-            double precision dimension(n), intent(in) :: rlat
-            double precision dimension(n), intent(in) :: rlon
-            double precision dimension(n), intent(out) :: x
-            double precision dimension(n), intent(out) :: y
-            double precision dimension(n), intent(out) :: z
+            integer( kind = 4 ), intent(in) :: n
+            real( kind = 8 ) dimension(n), intent(in) :: rlat
+            real( kind = 8 ) dimension(n), intent(in) :: rlon
+            real( kind = 8 ) dimension(n), intent(out) :: x
+            real( kind = 8 ) dimension(n), intent(out) :: y
+            real( kind = 8 ) dimension(n), intent(out) :: z
         end subroutine trans
         subroutine trmesh(n,x,y,z,list,lptr,lend,ier) ! in :_stripack:_stripack.f90
-            integer, intent(in) :: n
-            double precision dimension(n), intent(in) :: x
-            double precision dimension(n), intent(in) :: y
-            double precision dimension(n), intent(in) :: z
-            integer dimension(6*(n-2)), intent(out) :: list,lptr
-            integer dimension(n), intent(out) :: lend
-            integer, intent(out) :: ier
+            integer( kind = 4 ), intent(in) :: n
+            real( kind = 8 ) dimension(n), intent(in) :: x
+            real( kind = 8 ) dimension(n), intent(in) :: y
+            real( kind = 8 ) dimension(n), intent(in) :: z
+            integer( kind = 4 ) dimension(6*(n-2)), intent(out) :: list,lptr
+            integer( kind = 4 ) dimension(n), intent(out) :: lend
+            integer( kind = 4 ), intent(out) :: ier
         end subroutine trmesh
         subroutine interp_n(npts,nptso,order,olats,olons,x,y,z,data,lst,lptr,lend,odata,ierr)
-           integer, intent(in) :: npts, nptso,order
-           integer, intent(out) :: ierr
-           double precision, intent(in), dimension(nptso) :: olats,olons
-           double precision, intent(in), dimension(npts) :: x,y,z,data
-           double precision, intent(out), dimension(nptso) :: odata
-           integer, intent(in), dimension(npts) :: lend
-           integer, intent(in), dimension(6*(npts-2)) :: lst,lptr
+           integer( kind = 4 ), intent(in) :: npts, nptso,order
+           integer( kind = 4 ), intent(out) :: ierr
+           real( kind = 8 ), intent(in), dimension(nptso) :: olats,olons
+           real( kind = 8 ), intent(in), dimension(npts) :: x,y,z,data
+           real( kind = 8 ), intent(out), dimension(nptso) :: odata
+           integer( kind = 4 ), intent(in), dimension(npts) :: lend
+           integer( kind = 4 ), intent(in), dimension(6*(npts-2)) :: lst,lptr
         end subroutine interp_n
 end python module _stripack
 
