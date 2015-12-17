@@ -49,7 +49,7 @@ olons = np.radians(olons);  olats = np.radians(olats)
 olons, olats = np.meshgrid(olons, olats)
 
 t1 = time.clock()
-order = 1 # can be 0 (nearest neighbor), 1 (linear) or 3 (cubic)
+order = 1 # can be 0 (nearest neighbor) or 1 (linear)
 latlon_data = tri.interp(olons,olats,icos_data,order=order)
 print 'interpolation took',time.clock()-t1,' secs'
 
