@@ -13,7 +13,34 @@ Algorithm:
  R. J. Renka, "ALGORITHM 772: STRIPACK: Delaunay triangulation
  and Voronoi diagram on the surface of a sphere"
  ACM Trans. Math. Software, Volume 23 Issue 3, Sept. 1997
- pp 416-434."""
+ pp 416-434.
+
+Instance variables:
+
+lats, lons: lat/lon values of N nodes (in radians)
+npts:  number of nodes (N).
+x, y, z: cartesian coordinates corresponding to lats, lons.
+
+lst: 6*(N-2) nodal indices, which along with
+with lptr and lend, define the triangulation as a set of N
+adjacency lists; counterclockwise-ordered sequences of neighboring nodes
+such that the first and last neighbors of a boundary node are boundary
+nodes (the first neighbor of an interior node is arbitrary).  In order to
+distinguish between interior and boundary nodes, the last neighbor of
+each boundary node is represented by the negative of its index.
+The indices are 1-based (as in Fortran), not zero based (as in python).
+
+lptr:  Set of 6*(N-2) pointers (indices)
+in one-to-one correspondence with the elements of lst.
+lst(lptr(I)) indexes the node which follows lst(i) in cyclical
+counterclockwise order (the first neighbor follows the last neighbor).
+The indices are 1-based (as in Fortran), not zero based (as in python).
+
+lend: N pointers to adjacency lists.
+lend(k) points to the last neighbor of node K.  lst(lend(K)) < 0 if and
+only if K is a boundary node.
+The indices are 1-based (as in Fortran), not zero based (as in python).
+ """
         if len(lons.shape) != 1 or len(lats.shape) != 1:
             raise ValueError('lons and lats must be 1d')
         lats = lats.astype(np.float64,copy=False)
