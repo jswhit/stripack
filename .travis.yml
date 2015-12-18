@@ -11,12 +11,9 @@ python:
   - "3.4"
   - "3.5"
 
-addons:
-  packages:
-    - gfortran-4.9
-
 before_install:
   - pip install $DEPENDS
+  - sudo apt-get install gfortran
 
 install:
   - python setup.py install
