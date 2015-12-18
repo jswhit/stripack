@@ -1,0 +1,8 @@
+include README.md
+include MANIFEST.in
+include COPYING
+include _stripack.pyf
+include _stripack.f90
+include setup.py
+recursive-include stripack *
+recursive-include test *
