@@ -103,3 +103,54 @@ same as interp(olons,olats,data,order=0)"""
         """
 same as interp(olons,olats,data,order=1)"""
         return self.interp(olons,olats,data,order=1)
+
+if __name__ == "__main__":
+    # test function.
+    def _test(npts=14000,nlons=360,nlats=None,tol=1.e-2):
+        def fibonacci_pts(npts):
+            # return lats and lons of N=npts fibonacci grid on a sphere.
+            pi = np.pi
+            inc = pi * (3.0 - np.sqrt(5.0))
+            off = 2. / npts
+            lats = []; lons = []
+            for k in xrange(npts):
+               y = k*off - 1. + 0.5*off
+               r = np.sqrt(1 - y**2)
+               phi = k * inc
+               x = np.cos(phi)*r
+               z = np.sin(phi)*r
+               theta = np.arctan2(np.sqrt(x**2+y**2),z)
+               phi = np.arctan2(y,x)
+               lats.append( 0.5*pi-theta )
+               if phi < 0.: phi = 2.*pi+phi
+               lons.append( phi )
+            return np.array(lats), np.array(lons)
+        # fake test data.
+        def test_func(lon, lat):
+            nexp = 8
+            return np.cos(nexp*lon)*np.sin(0.5*lon)**nexp*np.cos(lat)**nexp+np.sin(lat)**nexp
+        # input mesh (fibonacci spiral points)
+        lats, lons = fibonacci_pts(npts)
+        icos_data = test_func(lons,lats)
+        # triangulation
+        tri = trmesh(lons, lats)
+        # output mesh 
+        delta = 360./nlons
+        olons = delta*np.arange(nlons)
+        if nlats is None: nlats = nlons/2+1
+        olats = -90.0 + delta*np.arange(nlats)
+        olons = np.radians(olons);  olats = np.radians(olats)
+        olons, olats = np.meshgrid(olons, olats)
+        # interpolation
+        order = 1 # can be 0 (nearest neighbor) or 1 (linear)
+        latlon_data = tri.interp(olons,olats,icos_data,order=order)
+        # check error
+        latlon_datax = test_func(olons,olats)
+        err = (np.abs(latlon_datax-latlon_data)).max()
+        print('max abs error %s specified tolerance %s' % (err,tol))
+        assert(err < tol)
+    import unittest
+    class RegridTest(unittest.TestCase):
+        def test(self):
+            _test()
+    unittest.main()
