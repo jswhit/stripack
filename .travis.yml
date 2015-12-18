@@ -12,8 +12,10 @@ python:
   - "3.5"
 
 before_install:
-  - pip install $DEPENDS
+  - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+  - sudo apt-get update -qq
   - sudo apt-get install gfortran-4.9
+  - pip install $DEPENDS
 
 install:
   - python setup.py install
