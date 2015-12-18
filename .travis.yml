@@ -13,7 +13,7 @@ python:
 
 before_install:
   - pip install $DEPENDS
-  - sudo apt-get install gfortran
+  - sudo apt-get install gfortran-4.9
 
 install:
   - python setup.py install
