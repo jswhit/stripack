@@ -113,7 +113,7 @@ if __name__ == "__main__":
             inc = pi * (3.0 - np.sqrt(5.0))
             off = 2. / npts
             lats = []; lons = []
-            for k in xrange(npts):
+            for k in range(npts):
                y = k*off - 1. + 0.5*off
                r = np.sqrt(1 - y**2)
                phi = k * inc
