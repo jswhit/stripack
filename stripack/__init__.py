@@ -32,7 +32,7 @@ The indices are 1-based (as in Fortran), not zero based (as in python).
 
 lptr:  Set of 6*(N-2) pointers (indices)
 in one-to-one correspondence with the elements of lst.
-lst(lptr(I)) indexes the node which follows lst(i) in cyclical
+lst(lptr(i)) indexes the node which follows lst(i) in cyclical
 counterclockwise order (the first neighbor follows the last neighbor).
 The indices are 1-based (as in Fortran), not zero based (as in python).
 
