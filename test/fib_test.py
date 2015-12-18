@@ -14,7 +14,7 @@ def fibonacci_pts(npts):
     inc = pi * (3.0 - np.sqrt(5.0))
     off = 2. / npts
     lats = []; lons = []
-    for k in xrange(npts):
+    for k in range(npts):
        y = k*off - 1. + 0.5*off
        r = np.sqrt(1 - y**2)
        phi = k * inc
@@ -32,14 +32,14 @@ def fibonacci_pts(npts):
 def test_func(lon, lat):
     nexp = 8
     return np.cos(nexp*lon)*np.sin(0.5*lon)**nexp*np.cos(lat)**nexp+np.sin(lat)**nexp
-npts = 360*180/4
+npts = 360*180//4
 lats, lons = fibonacci_pts(npts)
 icos_data = test_func(lons,lats)
 
 t1 = time.clock()
-print 'triangulation of', len(lons),' points'
+print('triangulation of', len(lons),' points')
 tri = trmesh(lons, lats)
-print 'triangulation took',time.clock()-t1,' secs'
+print('triangulation took',time.clock()-t1,' secs')
 
 nlons = 360; nlats = nlons/2 + 1 # 1 degree output mesh
 delta = 360./nlons
@@ -51,11 +51,11 @@ olons, olats = np.meshgrid(olons, olats)
 t1 = time.clock()
 order = 1 # can be 0 (nearest neighbor) or 1 (linear)
 latlon_data = tri.interp(olons,olats,icos_data,order=order)
-print 'interpolation took',time.clock()-t1,' secs'
+print('interpolation took',time.clock()-t1,' secs')
 
 latlon_datax = test_func(olons,olats)
-print 'max abs error:',(np.abs(latlon_datax-latlon_data)).max()
-print 'min/max field:',latlon_data.min(), latlon_datax.max()
+print('max abs error:',(np.abs(latlon_datax-latlon_data)).max())
+print('min/max field:',latlon_data.min(), latlon_datax.max())
 
 # make plot on output mesh
 if has_matplotlib:

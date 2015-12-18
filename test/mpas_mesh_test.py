@@ -16,9 +16,9 @@ mesh_filename = 'x1.2562.grid.nc' # 480 km mesh
 #mesh_filename = 'x1.2621442.grid.nc' # 15 km mesh
 mesh_nc = Dataset(mesh_filename)
 lats = mesh_nc.variables['latCell'][:]
-print 'min/max lats:',lats.min(), lats.max()
+print('min/max lats:',lats.min(), lats.max())
 lons = mesh_nc.variables['lonCell'][:]
-print 'min/max lons:',lons.min(), lons.max()
+print('min/max lons:',lons.min(), lons.max())
 
 # fake test data.
 def test_func(lon, lat):
@@ -27,9 +27,9 @@ def test_func(lon, lat):
 icos_data = test_func(lons,lats)
 
 t1 = time.clock()
-print 'triangulation of', len(lons),' points'
+print('triangulation of', len(lons),' points')
 tri = trmesh(lons, lats)
-print 'triangulation took',time.clock()-t1,' secs'
+print('triangulation took',time.clock()-t1,' secs')
 
 nlons = 360; nlats = nlons/2 # 1 degree output mesh
 delta = 360./nlons
@@ -42,11 +42,11 @@ olons, olats = np.meshgrid(olons, olats)
 t1 = time.clock()
 order = 1 # can be 0 (nearest neighbor) or 1 (linear)
 latlon_data = tri.interp(olons,olats,icos_data,order=order)
-print 'interpolation took',time.clock()-t1,' secs'
+print('interpolation took',time.clock()-t1,' secs')
 
 latlon_datax = test_func(olons,olats)
-print 'max abs error:',(np.abs(latlon_datax-latlon_data)).max()
-print 'min/max field:',latlon_data.min(), latlon_datax.max()
+print('max abs error:',(np.abs(latlon_datax-latlon_data)).max())
+print('min/max field:',latlon_data.min(), latlon_datax.max())
 
 # make plot on output mesh
 if has_matplotlib:
