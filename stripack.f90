@@ -5822,7 +5822,7 @@ SUBROUTINE INTERP (N,NNEIGHBOR,PLAT,PLON,X,Y,Z,W,LIST,LPTR,&
 
       subroutine interp_n(npts,nptso,order,olats,olons,x,y,z,datain,lst,&
                            lptr,lend,odata,ierr)
-      integer( kind = 4 ), intent(in) :: npts, nptso
+      integer( kind = 4 ), intent(in) :: npts, nptso, order
       integer( kind = 4 ), intent(out) :: ierr
       real( kind = 8 ), intent(in), dimension(nptso) :: olats,olons
       real( kind = 8 ), intent(in), dimension(npts) :: datain,x,y,z
