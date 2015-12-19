@@ -3,6 +3,7 @@ on a sphere.  Includes routines from algorithm 623 for interpolation (both
 nearest neighbor and linear).
 
 References:
+
  R. J. Renka, "ALGORITHM 623:  Interpolation on the Surface of a
  Sphere", ACM Trans. Math. Software, Vol. 10, No. 4, December 1984,
  pp. 437-439. (http://dl.acm.org/citation.cfm?id=356107)
