@@ -33,8 +33,13 @@ def fibonacci_pts(npts):
 def test_func(lon, lat):
     nexp = 8
     return np.cos(nexp*lon)*np.sin(0.5*lon)**nexp*np.cos(lat)**nexp+np.sin(lat)**nexp
-npts = 360*180//4
+npts = 100000
 lats, lons = fibonacci_pts(npts)
+shuffle = True # shuffling the points speeds up the triangulation
+if shuffle:
+    ix = np.arange(npts)
+    np.random.shuffle(ix)
+    lats = lats[ix]; lons = lons[ix]
 icos_data = test_func(lons,lats)
 
 t1 = time.clock()
@@ -42,7 +47,7 @@ print('triangulation of', len(lons),' points')
 tri = trmesh(lons, lats)
 print('triangulation took',time.clock()-t1,' secs')
 
-nlons = 360; nlats = nlons/2 + 1 # 1 degree output mesh
+nlons = 1440; nlats = nlons/2 + 1 # 1 degree output mesh
 delta = 360./nlons
 olons = delta*np.arange(nlons)
 olats = -90.0 + delta*np.arange(nlats)
