@@ -5835,8 +5835,11 @@ SUBROUTINE INTERP (N,NNEIGHBOR,PLAT,PLON,X,Y,Z,W,LIST,LPTR,&
       ierr = 0
       if (order == 0) then
          nn = .true.
-      else
+      else if (order == 1) then
          nn = .false.
+      else
+         print *,'fatal error: interp order must be 0 or 1'
+         stop
       endif
       do n=1,nptso
          call interp(npts,nn,olats(n),olons(n),x,y,z,datain,lst,lptr,&
