@@ -2,6 +2,21 @@ Python interface to ACM algorithm 772 (STRIPACK) fortran code for triangulation
 on a sphere.  Includes routines from algorithm 623 for interpolation (both
 nearest neighbor and linear).
 
+to install ([numpy](http://numpy.org) and fortran compiler (preferably 
+[gfortran](https://gcc.gnu.org/wiki/GFortran)) required):
+
+* python setup.py build
+   - If you change the fortran compiler, you may have to add the 
+flags `config_fc --fcompiler=<compiler name>` when setup.py is run
+(see docs for [numpy.distutils] (http://docs.scipy.org/doc/numpy-dev/f2py/distutils.html)).
+* python setup.py install
+
+* to run test, execute python stripack/__init__.py
+
+* see test/fib_test.py for example usage.
+
+*Probably will not work on Windows!*
+
 References:
 
  R. J. Renka, "ALGORITHM 623:  Interpolation on the Surface of a
