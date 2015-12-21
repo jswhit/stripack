@@ -9,7 +9,7 @@ if __name__ == "__main__":
           author            = "Jeff Whitaker",
           author_email      = "jeffrey.s.whitaker@noaa.gov",
           url               = "https://github.com/jswhit/stripack",
-          download_url      = "http://python.org/pypi/stripack",
+          download_url      = "https://github.com/jswhit/stripack/releases",
           version           = "1.0",
           description       = "Python interface to TOMS 772 (STRIPACK) fortran code",
           ext_modules       = [ext],
