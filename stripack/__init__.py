@@ -144,6 +144,9 @@ if __name__ == "__main__":
         icos_data = test_func(lons,lats)
         # triangulation
         tri = trmesh(lons, lats)
+        assert( tri.npts == npts )
+        assert( np.array_equal(tri.lons, lons) )
+        assert( np.array_equal(tri.lats, lats) )
         # output mesh
         delta = 360./nlons
         olons = delta*np.arange(nlons)
