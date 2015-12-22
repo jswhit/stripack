@@ -80,7 +80,12 @@ The&nbsp;indices&nbsp;are&nbsp;1-based&nbsp;(as&nbsp;in&nbsp;Fortran),&nbsp;not&
 output&nbsp;mesh&nbsp;defined&nbsp;by&nbsp;olons,olats&nbsp;(in&nbsp;radians),&nbsp;return&nbsp;result&nbsp;in&nbsp;data.<br>
 olons,&nbsp;olats&nbsp;can&nbsp;be&nbsp;1d&nbsp;or&nbsp;2d&nbsp;(output&nbsp;data&nbsp;array&nbsp;has&nbsp;same&nbsp;shape&nbsp;as&nbsp;olats,lons).<br>
 order&nbsp;of&nbsp;interpolation&nbsp;specified&nbsp;by&nbsp;'order'&nbsp;kwarg,&nbsp;can&nbsp;be&nbsp;0&nbsp;(nearest&nbsp;neighbor),<br>
-1&nbsp;(linear),&nbsp;or&nbsp;3&nbsp;(hermite&nbsp;cubic).</tt></dd></dl>
+1&nbsp;(linear),&nbsp;or&nbsp;3&nbsp;(hermite&nbsp;cubic).<br>
+&nbsp;<br>
+Algorithms:<br>
+&nbsp;R.&nbsp;J.&nbsp;Renka,&nbsp;"ALGORITHM&nbsp;623:&nbsp;&nbsp;Interpolation&nbsp;on&nbsp;the&nbsp;Surface&nbsp;of&nbsp;a<br>
+&nbsp;Sphere",&nbsp;ACM&nbsp;Trans.&nbsp;Math.&nbsp;Software,&nbsp;Vol.&nbsp;10,&nbsp;No.&nbsp;4,&nbsp;December&nbsp;1984,<br>
+&nbsp;pp.&nbsp;437-439.</tt></dd></dl>
 
 <dl><dt><a name="trmesh-interp_cubic"><strong>interp_cubic</strong></a>(self, olons, olats, data)</dt><dd><tt>same&nbsp;as&nbsp;<a href="#trmesh-interp">interp</a>(olons,olats,data,order=3)</tt></dd></dl>
 
