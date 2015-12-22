@@ -7093,322 +7093,654 @@ END SUBROUTINE getnp
       I = I + 1
       GO TO 7
       END
-      SUBROUTINE GRADL (N,K,X,Y,Z,W,IADJ,IEND, G,IER)
-      INTEGER( kind = 4) N, K, IADJ(1), IEND(N), IER
-      REAL( kind = 8 )    X(N), Y(N), Z(N), W(N), G(3)
-!
+SUBROUTINE GRADL (n,k,x,y,z,w,list,lptr,lend, g,ier)
+
+INTEGER( kind = 4), INTENT(IN)                      :: n
+INTEGER( kind = 4), INTENT(IN)                      :: k
+REAL( kind = 8), INTENT(IN OUT)                     :: x(n)
+REAL( kind = 8), INTENT(IN OUT)                     :: y(n)
+REAL( kind = 8), INTENT(IN OUT)                     :: z(n)
+REAL( kind = 8), INTENT(IN)                         :: w(n)
+INTEGER( kind = 4), INTENT(IN OUT)                  :: list(*)
+INTEGER( kind = 4), INTENT(IN OUT)                  :: lptr(*)
+INTEGER( kind = 4), INTENT(IN OUT)                  :: lend(n)
+REAL( kind = 8), INTENT(IN OUT)                     :: g(3)
+INTEGER( kind = 4), INTENT(OUT)                     :: ier
+
+
+
 !***********************************************************
-!
-!                                               ROBERT RENKA
-!                                       OAK RIDGE NATL. LAB.
-!                                             (615) 576-5139
-!
-!   GIVEN A TRIANGULATION OF A SET OF NODES ON THE UNIT
-! SPHERE WITH THEIR ASSOCIATED DATA VALUES W, THIS ROUTINE
-! ESTIMATES A GRADIENT VECTOR AT NODE K AS FOLLOWS -- THE
-! COORDINATE SYSTEM IS ROTATED SO THAT K BECOMES THE NORTH
-! POLE, NODE K AND A SET OF NEARBY NODES ARE PROJECTED
-! ORTHOGONALLY ONTO THE X-Y PLANE (IN THE NEW COORDINATE
-! SYSTEM), A QUADRATIC IS FITTED IN A WEIGHTED LEAST-SQUARES
-! SENSE TO THE DATA VALUES AT THE PROJECTED NODES SUCH THAT
-! THE VALUE (ASSOCIATED WITH K) AT (0,0) IS INTERPOLATED, X-
-! AND Y-PARTIAL DERIVATIVE ESTIMATES DX AND DY ARE COMPUTED
-! BY DIFFERENTIATING THE QUADRATIC AT (0,0), AND THE ESTI-
-! MATED GRADIENT G IS OBTAINED BY ROTATING (DX,DY,0) BACK TO
-! THE ORIGINAL COORDINATE SYSTEM.  NOTE THAT G LIES IN THE
-! PLANE TANGENT TO THE SPHERE AT NODE K, I.E. G IS ORTHOGO-
-! NAL TO THE UNIT VECTOR REPRESENTED BY NODE K.  A MARQUARDT
-! STABILIZATION FACTOR IS USED IF NECESSARY TO ENSURE A
-! WELL-CONDITIONED LEAST SQUARES SYSTEM, AND A UNIQUE SOLU-
-! TION EXISTS UNLESS THE NODES ARE COLLINEAR.
-!
-! INPUT PARAMETERS -    N - NUMBER OF NODES IN THE TRIANGU-
-!                           LATION.  N .GE. 7.
-!
-!                       K - NODE AT WHICH THE GRADIENT IS
-!                           SOUGHT.  1 .LE. K .LE. N.
-!
-!                   X,Y,Z - CARTESIAN COORDINATES OF THE
-!                           NODES.
-!
-!                       W - DATA VALUES AT THE NODES.  W(I)
-!                           IS ASSOCIATED WITH (X(I),Y(I),
-!                           Z(I)) FOR I = 1,...,N.
-!
-!                    IADJ - SET OF ADJACENCY LISTS OF NODES
-!                           IN THE TRIANGULATION.
-!
-!                    IEND - POINTERS TO THE ENDS OF
-!                           ADJACENCY LISTS FOR EACH NODE.
-!
-! IADJ AND IEND MAY BE CREATED BY SUBROUTINE TRMESH.
-!
-! INPUT PARAMETERS ARE NOT ALTERED BY THIS ROUTINE.
-!
-! OUTPUT PARAMETERS -    G - X-, Y-, AND Z-COMPONENTS (IN
-!                            THAT ORDER) OF THE ESTIMATED
-!                            GRADIENT AT NODE K UNLESS
-!                            IER .LT. 0.
-!
-!                      IER - ERROR INDICATOR
-!                            IER .GE. 6 IF NO ERRORS WERE
-!                                       ENCOUNTERED.  IER
-!                                       CONTAINS THE NUMBER
-!                                       OF NODES (INCLUDING
-!                                       K) USED IN THE LEAST
-!                                       SQUARES FIT.
-!                            IER = -1 IF N OR K IS OUT OF
-!                                     RANGE.
-!                            IER = -2 IF THE LEAST SQUARES
-!                                     SYSTEM HAS NO UNIQUE
-!                                     SOLUTION DUE TO DUP-
-!                                     LICATE OR COLLINEAR
-!                                     NODES.
-!
-! MODULES REFERENCED BY GRADL - GETNP, CONSTR, APLYR,
-!                               SETUP, GIVENS, ROTATE,
-!                               APLYRT
-!
-! INTRINSIC FUNCTIONS CALLED BY GRADL - MIN0, FLOAT, SQRT,
-!                                       AMIN1, ABS
-!
+
+!                                              From SSRFPACK
+!                                            Robert J. Renka
+!                                  Dept. of Computer Science
+!                                       Univ. of North Texas
+!                                           renka@cs.unt.edu
+!                                                   07/24/96
+
+!   Given a triangulation of a set of nodes on the unit
+! sphere with their associated data values W, this routine
+! estimates a gradient vector at node K as follows:  the
+! coordinate system is rotated so that K becomes the north
+! pole, node K and a set of nearby nodes are projected
+! orthogonally onto the X-Y plane (in the new coordinate
+! system), a quadratic is fitted in a weighted least squares
+! sense to the data values at the projected nodes such that
+! the value (associated with K) at (0,0) is interpolated, X
+! and Y-partial derivative estimates DX and DY are computed
+! by differentiating the quadratic at (0,0), and the esti-
+! mated gradient G is obtained by rotating (DX,DY,0) back to
+! the original coordinate system.  Note that G lies in the
+! plane tangent to the sphere at node K, i.e., G is orthogo-
+! nal to the unit vector represented by node K.  A Marquardt
+! stabilization factor is used if necessary to ensure a
+! well-conditioned least squares system, and a unique solu-
+! tion exists unless the nodes are collinear.
+
+! On input:
+
+!       N = Number of nodes in the triangulation.  N .GE. 7.
+
+!       K = Node at which the gradient is sought.  1 .LE. K
+!           .LE. N.
+
+!       X,Y,Z = Arrays containing the Cartesian coordinates
+!               of the nodes.
+
+!       W = Array containing the data values at the nodes.
+!           W(I) is associated with (X(I),Y(I),Z(I)) for
+!           I = 1,...,N.
+
+!       LIST,LPTR,LEND = Data structure defining the trian-
+!                        gulation.  Refer to STRIPACK
+!                        Subroutine TRMESH.
+
+! Input parameters are not altered by this routine.
+
+! On output:
+
+!       G = X, Y, and Z components (in that order) of the
+!           estimated gradient at node K unless IER < 0.
+
+!       IER = Error indicator:
+!             IER .GE. 6 if no errors were encountered.
+!                        IER contains the number of nodes
+!                        (including K) used in the least
+!                        squares fit.
+!             IER = -1 if N or K is outside its valid range.
+!             IER = -2 if the least squares system has no
+!                      unique solution due to duplicate or
+!                      collinear nodes.
+
+! STRIPACK module required by GRADL:  GETNP
+
+! SSRFPACK modules required by GRADL:  APLYR, APLYRT,
+!                                        CONSTR, GIVENS,
+!                                        ROTATE, SETUP
+
+! Intrinsic functions called by GRADL:  ABS, MIN, REAL( kind = 8), SQRT
+
 !***********************************************************
-!
-      INTEGER( kind = 4) NN, KK, LMN, LMX, LMIN, LMAX, LM1, LNP, &
-              NPTS(30), IERR, NP, I, J, IM1, IP1, JP1, L
-      REAL( kind = 8 )    WK, SUM, DF, RF, RTOL, AVSQ, AV, RIN, CX, SX, &
-              CY, SY, XP, YP, ZP, WT, A(6,6), C, S, DMIN, &
-              DTOL, SF, DX, DY
-      DATA    LMN/10/
-      DATA    LMX/30/, RTOL/1.E-6/, DTOL/.01/, SF/1./
-!
-! LOCAL PARAMETERS -
-!
-! NN,KK =     LOCAL COPIES OF N AND K
-! LMN,LMX =   MINIMUM AND MAXIMUM VALUES OF LNP FOR N
-!               SUFFICIENTLY LARGE.  IN MOST CASES LMN-1
-!               NODES ARE USED IN THE FIT.  7 .LE. LMN .LE.
-!               LMX.
-! LMIN,LMAX = MIN(LMN,N), MIN(LMX,N)
-! LM1 =       LMIN-1
-! LNP =       LENGTH OF NPTS OR LMAX+1
-! NPTS =      ARRAY CONTAINING THE INDICES OF A SEQUENCE OF
-!               NODES ORDERED BY ANGULAR DISTANCE FROM K.
-!               NPTS(1)=K AND THE FIRST LNP-1 ELEMENTS OF
-!               NPTS ARE USED IN THE LEAST SQUARES FIT.
-!               UNLESS LNP = LMAX+1, NPTS(LNP) DETERMINES R
-!               (SEE RIN).
-! IERR =      ERROR FLAG FOR CALLS TO GETNP (NOT CHECKED)
-! NP =        ELEMENT OF NPTS TO BE ADDED TO THE SYSTEM
-! I,J =       LOOP INDICES
+
+
+INTEGER( kind = 4), PARAMETER :: lmn=10
+INTEGER( kind = 4), PARAMETER :: lmx=30
+INTEGER :: i, ierr, im1, ip1, j, jp1, kk, l, lm1, lmax,  &
+    lmin, lnp, nn, np, npts(lmx)
+REAL :: a(6,6), av, avsq, c, cx, cy, df, dmin, dtol,  &
+    dx, dy, rf, rin, rtol, s, sf, sum, sx, sy, wk, wt, xp, yp, zp
+
+DATA    rtol/1.e-6/, dtol/.01/, sf/1./
+
+! Local parameters:
+
+! A =         Transpose of the (upper triangle of the) aug-
+!               mented regression matrix
+! AV =        Root-mean-square distance (in the rotated
+!               coordinate system) between the origin and
+!               the nodes (other than K) in the least
+!               squares fit.  The first 3 columns of A**T
+!               are scaled by 1/AVSQ, the next 2 by 1/AV.
+! AVSQ =      AV*AV:  accumulated in SUM
+! C,S =       Components of the plane rotation used to
+!               triangularize the regression matrix
+! CX,SX =     Components of a plane rotation about the X-
+!               axis which, together with CY and SY, define
+!               a mapping from node K to the north pole
+!               (0,0,1)
+! CY,SY =     Components of a plane rotation about the Y-
+!               axis
+! DF =        Negative Z component (in the rotated coordi-
+!               nate system) of an element NP of NPTS --
+!               increasing function of the angular distance
+!               between K and NP.  DF lies in the interval
+!               (-1,1).
+! DMIN =      Minimum of the magnitudes of the diagonal
+!               elements of the triangularized regression
+!               matrix
+! DTOL =      Tolerance for detecting an ill-conditioned
+!               system (DMIN is required to be at least
+!               DTOL)
+! DX,DY =     X and Y components of the estimated gradient
+!               in the rotated coordinate system
+! I,J =       Loop indexes
+! IERR =      Error flag for calls to GETNP (not checked)
 ! IM1,IP1 =   I-1, I+1
 ! JP1 =       J+1
-! L =         NUMBER OF COLUMNS OF A**T TO WHICH A ROTATION
-!               IS APPLIED
-! WK =        W(K) -- DATA VALUE AT NODE K
-! SUM =       SUM OF SQUARED EUCLIDEAN DISTANCES (IN THE
-!               ROTATED COORDINATE SYSTEM) BETWEEN THE
-!               ORIGIN AND THE NODES USED IN THE LEAST
-!               SQUARES FIT
-! DF =        NEGATIVE Z-COMPONENT (IN THE ROTATED COORDI-
-!               NATE SYSTEM) OF AN ELEMENT NP OF NPTS --
-!               INCREASING FUNCTION OF THE ANGULAR DISTANCE
-!               BETWEEN K AND NP.  DF LIES IN THE INTERVAL
-!               (-1,1).
-! RF =        VALUE OF DF ASSOCIATED WITH NPTS(LNP) UNLESS
-!               LNP = LMAX+1 (SEE RIN)
-! RTOL =      TOLERANCE FOR DETERMINING LNP (AND HENCE R) --
-!               IF THE INCREASE IN DF BETWEEN TWO SUCCESSIVE
-!               ELEMENTS OF NPTS IS LESS THAN RTOL, THEY ARE
-!               TREATED AS BEING THE SAME DISTANCE FROM NODE
-!               K AND AN ADDITIONAL NODE IS ADDED
-! AVSQ =      AV*AV -- ACCUMULATED IN SUM
-! AV =        ROOT-MEAN-SQUARE DISTANCE (IN THE ROTATED
-!               COORDINATE SYSTEM) BETWEEN THE ORIGIN AND
-!               THE NODES (OTHER THAN K) IN THE LEAST
-!               SQUARES FIT.  THE FIRST 3 COLUMNS OF A**T
-!               ARE SCALED BY 1/AVSQ, THE NEXT 2 BY 1/AV.
-! RIN =       INVERSE OF A RADIUS OF INFLUENCE R WHICH
-!               ENTERS INTO WT -- R = 1+RF UNLESS ALL ELE-
-!               MENTS OF NPTS ARE USED IN THE FIT (LNP =
-!               LMAX+1), IN WHICH CASE R IS THE DISTANCE
-!               FUNCTION ASSOCIATED WITH SOME POINT MORE
-!               DISTANT FROM K THAN NPTS(LMAX)
-! CX,SX =     COMPONENTS OF A PLANE ROTATION ABOUT THE X-
-!               AXIS WHICH, TOGETHER WITH CY AND SY, DEFINE
-!               A MAPPING FROM NODE K TO THE NORTH POLE
-!               (0,0,1)
-! CY,SY =     COMPONENTS OF A PLANE ROTATION ABOUT THE Y-
-!               AXIS
-! XP,YP,ZP =  COORDINATES OF NP IN THE ROTATED COORDINATE
-!               SYSTEM UNLESS ZP .LT. 0, IN WHICH CASE
-!               (XP,YP,0) LIES ON THE EQUATOR
-! WT =        WEIGHT FOR THE EQUATION CORRESPONDING TO NP --
-!               WT = (R-D)/(R*D) = 1/D - RIN WHERE D = 1-ZP
-!               IS ASSOCIATED WITH NP
-! A =         TRANSPOSE OF THE (UPPER TRIANGLE OF THE) AUG-
-!               MENTED REGRESSION MATRIX
-! C,S =       COMPONENTS OF THE PLANE ROTATION USED TO
-!               TRIANGULARIZE THE REGRESSION MATRIX
-! DMIN =      MINIMUM OF THE MAGNITUDES OF THE DIAGONAL
-!               ELEMENTS OF THE TRIANGULARIZED REGRESSION
-!               MATRIX
-! DTOL =      TOLERANCE FOR DETECTING AN ILL-CONDITIONED
-!               SYSTEM -- DMIN IS REQUIRED TO BE AT LEAST
-!               DTOL
-! SF =        MARQUARDT STABILIZATION FACTOR USED TO DAMP
-!               OUT THE FIRST 3 SOLUTION COMPONENTS (SECOND
-!               PARTIALS OF THE QUADRATIC) WHEN THE SYSTEM
-!               IS ILL-CONDITIONED.  INCREASING SF RESULTS
-!               IN MORE DAMPING (A MORE NEARLY LINEAR FIT).
-! DX,DY =     X AND Y COMPONENTS OF THE ESTIMATED GRADIENT
-!               IN THE ROTATED COORDINATE SYSTEM
-!
-      NN = N
-      KK = K
-      WK = W(KK)
-!
-! CHECK FOR ERRORS AND INITIALIZE LMIN, LMAX
-!
-      IF (NN .LT. 7  .OR.  KK .LT. 1  .OR.  KK .GT. NN) &
-         GO TO 13
-      LMIN = MIN0(LMN,NN)
-      LMAX = MIN0(LMX,NN)
-!
-! COMPUTE NPTS, LNP, AVSQ, AV, AND R.
-!   SET NPTS TO THE CLOSEST LMIN-1 NODES TO K.  DF CONTAINS
-!   THE NEGATIVE Z-COMPONENT (IN THE ROTATED COORDINATE
-!   SYSTEM) OF THE NEW NODE ON RETURN FROM GETNP.
-!
-      SUM = 0.
-      NPTS(1) = KK
-      LM1 = LMIN - 1
-      DO 1 LNP = 2,LM1
-        CALL GETNP (X,Y,Z,IADJ,IEND,LNP, NPTS, DF,IERR)
-    1   SUM = SUM + 1. - DF*DF
-!
-!   ADD ADDITIONAL NODES TO NPTS UNTIL THE INCREASE IN
-!     R = 1+RF IS AT LEAST RTOL.
-!
-      DO 2 LNP = LMIN,LMAX
-        CALL GETNP (X,Y,Z,IADJ,IEND,LNP, NPTS, RF,IERR)
-        IF (RF-DF .GE. RTOL) GO TO 3
-    2   SUM = SUM + 1. - RF*RF
-!
-!   USE ALL LMAX NODES IN THE LEAST SQUARES FIT.  R IS
-!     ARBITRARILY INCREASED BY 5 PER CENT.
-!
-      RF = 1.05*RF + .05
-      LNP = LMAX + 1
-!
-!   THERE ARE LNP-2 EQUATIONS CORRESPONDING TO NODES
+! KK =        Local copy of K
+! L =         Number of columns of A**T to which a rotation
+!               is applied
+! LM1 =       LMIN-1
+! LMIN,LMAX = Min(LMN,N), Min(LMX,N)
+! LMN,LMX =   Minimum and maximum values of LNP for N
+!               sufficiently large.  In most cases LMN-1
+!               nodes are used in the fit.  7 .LE. LMN .LE.
+!               LMX.
+! LNP =       Length of NPTS or LMAX+1
+! NN =        Local copy of N
+! NP =        Element of NPTS to be added to the system
+! NPTS =      Array containing the indexes of a sequence of
+!               nodes ordered by angular distance from K.
+!               NPTS(1)=K and the first LNP-1 elements of
+!               NPTS are used in the least squares fit.
+!               unless LNP = LMAX+1, NPTS(LNP) determines R
+!               (see RIN).
+! RF =        Value of DF associated with NPTS(LNP) unless
+!               LNP = LMAX+1 (see RIN)
+! RIN =       Inverse of a radius of influence R which
+!               enters into WT:  R = 1+RF unless all ele-
+!               ments of NPTS are used in the fit (LNP =
+!               LMAX+1), in which case R is the distance
+!               function associated with some point more
+!               distant from K than NPTS(LMAX)
+! RTOL =      Tolerance for determining LNP (and hence R):
+!               if the increase in DF between two successive
+!               elements of NPTS is less than RTOL, they are
+!               treated as being the same distance from node
+!               K and an additional node is added
+! SF =        Marquardt stabilization factor used to damp
+!               out the first 3 solution components (second
+!               partials of the quadratic) when the system
+!               is ill-conditioned.  Increasing SF results
+!               in more damping (a more nearly linear fit).
+! SUM =       Sum of squared Euclidean distances (in the
+!               rotated coordinate system) between the
+!               origin and the nodes used in the least
+!               squares fit
+! WK =        W(K) -- data value at node K
+! WT =        Weight for the equation coreesponding to NP:
+!               WT = (R-D)/(R*D) = 1/D - RIN, where D = 1-ZP
+!               is associated with NP
+! XP,YP,ZP =  Coordinates of NP in the rotated coordinate
+!               system unless ZP < 0, in which case
+!               (XP,YP,0) lies on the equator
+
+nn = n
+kk = k
+wk = w(kk)
+
+! Check for errors and initialize LMIN, LMAX.
+
+IF (nn < 7  .OR.  kk < 1  .OR.  kk > nn) GO TO 13
+lmin = MIN(lmn,nn)
+lmax = MIN(lmx,nn)
+
+! Compute NPTS, LNP, AVSQ, AV, and R.
+!   Set NPTS to the closest LMIN-1 nodes to K.  DF contains
+!   the negative Z component (in the rotated coordinate
+!   system) of the new node on return from GETNP.
+
+sum = 0.
+npts(1) = kk
+lm1 = lmin - 1
+DO  lnp = 2,lm1
+  CALL getnp (x,y,z,list,lptr,lend,lnp, npts, df,ierr)
+  sum = sum + 1. - df*df
+END DO
+
+!   Add additional nodes to NPTS until the increase in
+!     R = 1+RF is at least RTOL.
+
+DO  lnp = lmin,lmax
+  CALL getnp (x,y,z,list,lptr,lend,lnp, npts, rf,ierr)
+  IF (rf-df >= rtol) GO TO 3
+  sum = sum + 1. - rf*rf
+END DO
+
+!   Use all LMAX nodes in the least squares fit.  R is
+!     arbitrarily increased by 5 percent.
+
+rf = 1.05*rf + .05
+lnp = lmax + 1
+
+!   There are LNP-2 equations corresponding to nodes
 !     NPTS(2),...,NPTS(LNP-1).
-!
-    3 AVSQ = SUM/FLOAT(LNP-2)
-      AV = SQRT(AVSQ)
-      RIN = 1./(1.+RF)
-!
-! CONSTRUCT THE ROTATION
-!
-      CALL CONSTR (X(KK),Y(KK),Z(KK), CX,SX,CY,SY)
-!
-! SET UP THE FIRST 5 EQUATIONS OF THE AUGMENTED REGRESSION
-!   MATRIX (TRANSPOSED) AS THE COLUMNS OF A, AND ZERO OUT
-!   THE LOWER TRIANGLE (UPPER TRIANGLE OF A) WITH GIVENS
-!   ROTATIONS
-!
-      DO 5 I = 1,5
-        NP = NPTS(I+1)
-        CALL APLYR (X(NP),Y(NP),Z(NP),CX,SX,CY,SY, XP,YP,ZP)
-        WT = 1./(1.-ZP) - RIN
-        CALL SETUP (XP,YP,W(NP),WK,AV,AVSQ,WT, A(1,I))
-        IF (I .EQ. 1) GO TO 5
-        IM1 = I - 1
-        DO 4 J = 1,IM1
-          JP1 = J + 1
-          L = 6 - J
-          CALL GIVENS ( A(J,J),A(J,I), C,S)
-    4     CALL ROTATE (L,C,S, A(JP1,J),A(JP1,I) )
-    5   CONTINUE
-!
-! ADD THE ADDITIONAL EQUATIONS TO THE SYSTEM USING
-!   THE LAST COLUMN OF A -- I .LE. LNP.
-!
-      I = 7
-    6   IF (I .EQ. LNP) GO TO 8
-        NP = NPTS(I)
-        CALL APLYR (X(NP),Y(NP),Z(NP),CX,SX,CY,SY, XP,YP,ZP)
-        WT = 1./(1.-ZP) - RIN
-        CALL SETUP (XP,YP,W(NP),WK,AV,AVSQ,WT, A(1,6))
-        DO 7 J = 1,5
-          JP1 = J + 1
-          L = 6 - J
-          CALL GIVENS ( A(J,J),A(J,6), C,S)
-    7     CALL ROTATE (L,C,S, A(JP1,J),A(JP1,6) )
-        I = I + 1
-        GO TO 6
-!
-! TEST THE SYSTEM FOR ILL-CONDITIONING
-!
-    8 DMIN = AMIN1( ABS(A(1,1)),ABS(A(2,2)),ABS(A(3,3)), &
-                    ABS(A(4,4)),ABS(A(5,5)) )
-      IF (DMIN .GE. DTOL) GO TO 12
-      IF (LNP .GT. LMAX) GO TO 9
-!
-! ADD ANOTHER NODE TO THE SYSTEM AND INCREASE R --
-!   I .EQ. LNP
-!
-      LNP = LNP + 1
-      IF (LNP .LE. LMAX) CALL GETNP (X,Y,Z,IADJ,IEND,LNP, &
-                                     NPTS, RF,IERR)
-      RIN = 1./(1.05*(1.+RF))
-      GO TO 6
-!
-! STABILIZE THE SYSTEM BY DAMPING SECOND PARTIALS --ADD
-!   MULTIPLES OF THE FIRST THREE UNIT VECTORS TO THE FIRST
-!   THREE EQUATIONS.
-!
-    9 DO 11 I = 1,3
-        A(I,6) = SF
-        IP1 = I + 1
-        DO 10 J = IP1,6
-   10     A(J,6) = 0.
-        DO 11 J = I,5
-          JP1 = J + 1
-          L = 6 - J
-          CALL GIVENS ( A(J,J),A(J,6), C,S)
-   11     CALL ROTATE (L,C,S, A(JP1,J),A(JP1,6) )
-!
-! TEST THE LINEAR PORTION OF THE STABILIZED SYSTEM FOR
-!   ILL-CONDITIONING
-!
-      DMIN = AMIN1( ABS(A(4,4)),ABS(A(5,5)) )
-      IF (DMIN .LT. DTOL) GO TO 14
-!
-! SOLVE THE 2 BY 2 TRIANGULAR SYSTEM FOR THE ESTIMATED
-!   PARTIAL DERIVATIVES
-!
-   12 DY = A(6,5)/A(5,5)
-      DX = (A(6,4) - A(5,4)*DY)/A(4,4)/AV
-      DY = DY/AV
-!
-! ROTATE THE GRADIENT (DX,DY,0) BACK INTO THE ORIGINAL
-!   COORDINATE SYSTEM
-!
-      CALL APLYRT (DX,DY,CX,SX,CY,SY, G)
-      IER = LNP - 1
-      RETURN
-!
-! N OR K IS OUT OF RANGE
-!
-   13 IER = -1
-      RETURN
-!
-! NO UNIQUE SOLUTION DUE TO COLLINEAR NODES
-!
-   14 IER = -2
-      RETURN
-      END
+
+3 avsq = sum/REAL(lnp-2)
+av = SQRT(avsq)
+rin = 1./(1.+rf)
+
+! Construct the rotation.
+
+CALL constr (x(kk),y(kk),z(kk), cx,sx,cy,sy)
+
+! Set up the first 5 equations of the augmented regression
+!   matrix (transposed) as the columns of A, and zero out
+!   the lower triangle (upper triangle of A) with Givens
+!   rotations.
+
+DO  i = 1,5
+  np = npts(i+1)
+  CALL aplyr (x(np),y(np),z(np),cx,sx,cy,sy, xp,yp,zp)
+  wt = 1./(1.-zp) - rin
+  CALL setup (xp,yp,w(np),wk,av,avsq,wt, a(1,i))
+  IF (i == 1) CYCLE
+  im1 = i - 1
+  DO  j = 1,im1
+    jp1 = j + 1
+    l = 6 - j
+    CALL givens ( a(j,j),a(j,i), c,s)
+    CALL rotate (l,c,s, a(jp1,j),a(jp1,i) )
+  END DO
+END DO
+
+! Add the additional equations to the system using
+!   the last column of A.  I .LE. LNP.
+
+i = 7
+6   IF (i == lnp) GO TO 8
+np = npts(i)
+CALL aplyr (x(np),y(np),z(np),cx,sx,cy,sy, xp,yp,zp)
+wt = 1./(1.-zp) - rin
+CALL setup (xp,yp,w(np),wk,av,avsq,wt, a(1,6))
+DO  j = 1,5
+  jp1 = j + 1
+  l = 6 - j
+  CALL givens ( a(j,j),a(j,6), c,s)
+  CALL rotate (l,c,s, a(jp1,j),a(jp1,6) )
+END DO
+i = i + 1
+GO TO 6
+
+! Test the system for ill-conditioning.
+
+8 dmin = MIN( ABS(a(1,1)),ABS(a(2,2)),ABS(a(3,3)), ABS(a(4,4)),ABS(a(5,5)) )
+IF (dmin >= dtol) GO TO 12
+IF (lnp <= lmax) THEN
+  
+! Add another node to the system and increase R.
+!   I = LNP.
+  
+  lnp = lnp + 1
+  IF (lnp <= lmax) CALL getnp (x,y,z,list,lptr,lend, lnp,npts, rf,ierr)
+  rin = 1./(1.05*(1.+rf))
+  GO TO 6
+END IF
+
+! Stabilize the system by damping second partials.  Add
+!   multiples of the first three unit vectors to the first
+!   three equations.
+
+DO  i = 1,3
+  a(i,6) = sf
+  ip1 = i + 1
+  DO  j = ip1,6
+    a(j,6) = 0.
+  END DO
+  DO  j = i,5
+    jp1 = j + 1
+    l = 6 - j
+    CALL givens ( a(j,j),a(j,6), c,s)
+    CALL rotate (l,c,s, a(jp1,j),a(jp1,6) )
+  END DO
+END DO
+
+! Test the linear portion of the stabilized system for
+!   ill-conditioning.
+
+dmin = MIN( ABS(a(4,4)),ABS(a(5,5)) )
+IF (dmin < dtol) GO TO 14
+
+! Solve the 2 by 2 triangular system for the estimated
+!   partial derivatives.
+
+12 dy = a(6,5)/a(5,5)
+dx = (a(6,4) - a(5,4)*dy)/a(4,4)/av
+dy = dy/av
+
+! Rotate the gradient (DX,DY,0) back into the original
+!   coordinate system.
+
+CALL aplyrt (dx,dy,cx,sx,cy,sy, g)
+ier = lnp - 1
+RETURN
+
+! N or K is outside its valid range.
+
+13 ier = -1
+RETURN
+
+! No unique solution due to collinear nodes.
+
+14 ier = -2
+RETURN
+END SUBROUTINE gradl
+!      SUBROUTINE GRADL (N,K,X,Y,Z,W,IADJ,IEND, G,IER)
+!      INTEGER( kind = 4) N, K, IADJ(1), IEND(N), IER
+!      REAL( kind = 8 )    X(N), Y(N), Z(N), W(N), G(3)
+!!
+!!***********************************************************
+!!
+!!                                               ROBERT RENKA
+!!                                       OAK RIDGE NATL. LAB.
+!!                                             (615) 576-5139
+!!
+!!   GIVEN A TRIANGULATION OF A SET OF NODES ON THE UNIT
+!! SPHERE WITH THEIR ASSOCIATED DATA VALUES W, THIS ROUTINE
+!! ESTIMATES A GRADIENT VECTOR AT NODE K AS FOLLOWS -- THE
+!! COORDINATE SYSTEM IS ROTATED SO THAT K BECOMES THE NORTH
+!! POLE, NODE K AND A SET OF NEARBY NODES ARE PROJECTED
+!! ORTHOGONALLY ONTO THE X-Y PLANE (IN THE NEW COORDINATE
+!! SYSTEM), A QUADRATIC IS FITTED IN A WEIGHTED LEAST-SQUARES
+!! SENSE TO THE DATA VALUES AT THE PROJECTED NODES SUCH THAT
+!! THE VALUE (ASSOCIATED WITH K) AT (0,0) IS INTERPOLATED, X-
+!! AND Y-PARTIAL DERIVATIVE ESTIMATES DX AND DY ARE COMPUTED
+!! BY DIFFERENTIATING THE QUADRATIC AT (0,0), AND THE ESTI-
+!! MATED GRADIENT G IS OBTAINED BY ROTATING (DX,DY,0) BACK TO
+!! THE ORIGINAL COORDINATE SYSTEM.  NOTE THAT G LIES IN THE
+!! PLANE TANGENT TO THE SPHERE AT NODE K, I.E. G IS ORTHOGO-
+!! NAL TO THE UNIT VECTOR REPRESENTED BY NODE K.  A MARQUARDT
+!! STABILIZATION FACTOR IS USED IF NECESSARY TO ENSURE A
+!! WELL-CONDITIONED LEAST SQUARES SYSTEM, AND A UNIQUE SOLU-
+!! TION EXISTS UNLESS THE NODES ARE COLLINEAR.
+!!
+!! INPUT PARAMETERS -    N - NUMBER OF NODES IN THE TRIANGU-
+!!                           LATION.  N .GE. 7.
+!!
+!!                       K - NODE AT WHICH THE GRADIENT IS
+!!                           SOUGHT.  1 .LE. K .LE. N.
+!!
+!!                   X,Y,Z - CARTESIAN COORDINATES OF THE
+!!                           NODES.
+!!
+!!                       W - DATA VALUES AT THE NODES.  W(I)
+!!                           IS ASSOCIATED WITH (X(I),Y(I),
+!!                           Z(I)) FOR I = 1,...,N.
+!!
+!!                    IADJ - SET OF ADJACENCY LISTS OF NODES
+!!                           IN THE TRIANGULATION.
+!!
+!!                    IEND - POINTERS TO THE ENDS OF
+!!                           ADJACENCY LISTS FOR EACH NODE.
+!!
+!! IADJ AND IEND MAY BE CREATED BY SUBROUTINE TRMESH.
+!!
+!! INPUT PARAMETERS ARE NOT ALTERED BY THIS ROUTINE.
+!!
+!! OUTPUT PARAMETERS -    G - X-, Y-, AND Z-COMPONENTS (IN
+!!                            THAT ORDER) OF THE ESTIMATED
+!!                            GRADIENT AT NODE K UNLESS
+!!                            IER .LT. 0.
+!!
+!!                      IER - ERROR INDICATOR
+!!                            IER .GE. 6 IF NO ERRORS WERE
+!!                                       ENCOUNTERED.  IER
+!!                                       CONTAINS THE NUMBER
+!!                                       OF NODES (INCLUDING
+!!                                       K) USED IN THE LEAST
+!!                                       SQUARES FIT.
+!!                            IER = -1 IF N OR K IS OUT OF
+!!                                     RANGE.
+!!                            IER = -2 IF THE LEAST SQUARES
+!!                                     SYSTEM HAS NO UNIQUE
+!!                                     SOLUTION DUE TO DUP-
+!!                                     LICATE OR COLLINEAR
+!!                                     NODES.
+!!
+!! MODULES REFERENCED BY GRADL - GETNP, CONSTR, APLYR,
+!!                               SETUP, GIVENS, ROTATE,
+!!                               APLYRT
+!!
+!! INTRINSIC FUNCTIONS CALLED BY GRADL - MIN0, FLOAT, SQRT,
+!!                                       AMIN1, ABS
+!!
+!!***********************************************************
+!!
+!      INTEGER( kind = 4) NN, KK, LMN, LMX, LMIN, LMAX, LM1, LNP, &
+!              NPTS(30), IERR, NP, I, J, IM1, IP1, JP1, L
+!      REAL( kind = 8 )    WK, SUM, DF, RF, RTOL, AVSQ, AV, RIN, CX, SX, &
+!              CY, SY, XP, YP, ZP, WT, A(6,6), C, S, DMIN, &
+!              DTOL, SF, DX, DY
+!      DATA    LMN/10/
+!      DATA    LMX/30/, RTOL/1.E-6/, DTOL/.01/, SF/1./
+!!
+!! LOCAL PARAMETERS -
+!!
+!! NN,KK =     LOCAL COPIES OF N AND K
+!! LMN,LMX =   MINIMUM AND MAXIMUM VALUES OF LNP FOR N
+!!               SUFFICIENTLY LARGE.  IN MOST CASES LMN-1
+!!               NODES ARE USED IN THE FIT.  7 .LE. LMN .LE.
+!!               LMX.
+!! LMIN,LMAX = MIN(LMN,N), MIN(LMX,N)
+!! LM1 =       LMIN-1
+!! LNP =       LENGTH OF NPTS OR LMAX+1
+!! NPTS =      ARRAY CONTAINING THE INDICES OF A SEQUENCE OF
+!!               NODES ORDERED BY ANGULAR DISTANCE FROM K.
+!!               NPTS(1)=K AND THE FIRST LNP-1 ELEMENTS OF
+!!               NPTS ARE USED IN THE LEAST SQUARES FIT.
+!!               UNLESS LNP = LMAX+1, NPTS(LNP) DETERMINES R
+!!               (SEE RIN).
+!! IERR =      ERROR FLAG FOR CALLS TO GETNP (NOT CHECKED)
+!! NP =        ELEMENT OF NPTS TO BE ADDED TO THE SYSTEM
+!! I,J =       LOOP INDICES
+!! IM1,IP1 =   I-1, I+1
+!! JP1 =       J+1
+!! L =         NUMBER OF COLUMNS OF A**T TO WHICH A ROTATION
+!!               IS APPLIED
+!! WK =        W(K) -- DATA VALUE AT NODE K
+!! SUM =       SUM OF SQUARED EUCLIDEAN DISTANCES (IN THE
+!!               ROTATED COORDINATE SYSTEM) BETWEEN THE
+!!               ORIGIN AND THE NODES USED IN THE LEAST
+!!               SQUARES FIT
+!! DF =        NEGATIVE Z-COMPONENT (IN THE ROTATED COORDI-
+!!               NATE SYSTEM) OF AN ELEMENT NP OF NPTS --
+!!               INCREASING FUNCTION OF THE ANGULAR DISTANCE
+!!               BETWEEN K AND NP.  DF LIES IN THE INTERVAL
+!!               (-1,1).
+!! RF =        VALUE OF DF ASSOCIATED WITH NPTS(LNP) UNLESS
+!!               LNP = LMAX+1 (SEE RIN)
+!! RTOL =      TOLERANCE FOR DETERMINING LNP (AND HENCE R) --
+!!               IF THE INCREASE IN DF BETWEEN TWO SUCCESSIVE
+!!               ELEMENTS OF NPTS IS LESS THAN RTOL, THEY ARE
+!!               TREATED AS BEING THE SAME DISTANCE FROM NODE
+!!               K AND AN ADDITIONAL NODE IS ADDED
+!! AVSQ =      AV*AV -- ACCUMULATED IN SUM
+!! AV =        ROOT-MEAN-SQUARE DISTANCE (IN THE ROTATED
+!!               COORDINATE SYSTEM) BETWEEN THE ORIGIN AND
+!!               THE NODES (OTHER THAN K) IN THE LEAST
+!!               SQUARES FIT.  THE FIRST 3 COLUMNS OF A**T
+!!               ARE SCALED BY 1/AVSQ, THE NEXT 2 BY 1/AV.
+!! RIN =       INVERSE OF A RADIUS OF INFLUENCE R WHICH
+!!               ENTERS INTO WT -- R = 1+RF UNLESS ALL ELE-
+!!               MENTS OF NPTS ARE USED IN THE FIT (LNP =
+!!               LMAX+1), IN WHICH CASE R IS THE DISTANCE
+!!               FUNCTION ASSOCIATED WITH SOME POINT MORE
+!!               DISTANT FROM K THAN NPTS(LMAX)
+!! CX,SX =     COMPONENTS OF A PLANE ROTATION ABOUT THE X-
+!!               AXIS WHICH, TOGETHER WITH CY AND SY, DEFINE
+!!               A MAPPING FROM NODE K TO THE NORTH POLE
+!!               (0,0,1)
+!! CY,SY =     COMPONENTS OF A PLANE ROTATION ABOUT THE Y-
+!!               AXIS
+!! XP,YP,ZP =  COORDINATES OF NP IN THE ROTATED COORDINATE
+!!               SYSTEM UNLESS ZP .LT. 0, IN WHICH CASE
+!!               (XP,YP,0) LIES ON THE EQUATOR
+!! WT =        WEIGHT FOR THE EQUATION CORRESPONDING TO NP --
+!!               WT = (R-D)/(R*D) = 1/D - RIN WHERE D = 1-ZP
+!!               IS ASSOCIATED WITH NP
+!! A =         TRANSPOSE OF THE (UPPER TRIANGLE OF THE) AUG-
+!!               MENTED REGRESSION MATRIX
+!! C,S =       COMPONENTS OF THE PLANE ROTATION USED TO
+!!               TRIANGULARIZE THE REGRESSION MATRIX
+!! DMIN =      MINIMUM OF THE MAGNITUDES OF THE DIAGONAL
+!!               ELEMENTS OF THE TRIANGULARIZED REGRESSION
+!!               MATRIX
+!! DTOL =      TOLERANCE FOR DETECTING AN ILL-CONDITIONED
+!!               SYSTEM -- DMIN IS REQUIRED TO BE AT LEAST
+!!               DTOL
+!! SF =        MARQUARDT STABILIZATION FACTOR USED TO DAMP
+!!               OUT THE FIRST 3 SOLUTION COMPONENTS (SECOND
+!!               PARTIALS OF THE QUADRATIC) WHEN THE SYSTEM
+!!               IS ILL-CONDITIONED.  INCREASING SF RESULTS
+!!               IN MORE DAMPING (A MORE NEARLY LINEAR FIT).
+!! DX,DY =     X AND Y COMPONENTS OF THE ESTIMATED GRADIENT
+!!               IN THE ROTATED COORDINATE SYSTEM
+!!
+!      NN = N
+!      KK = K
+!      WK = W(KK)
+!!
+!! CHECK FOR ERRORS AND INITIALIZE LMIN, LMAX
+!!
+!      IF (NN .LT. 7  .OR.  KK .LT. 1  .OR.  KK .GT. NN) &
+!         GO TO 13
+!      LMIN = MIN0(LMN,NN)
+!      LMAX = MIN0(LMX,NN)
+!!
+!! COMPUTE NPTS, LNP, AVSQ, AV, AND R.
+!!   SET NPTS TO THE CLOSEST LMIN-1 NODES TO K.  DF CONTAINS
+!!   THE NEGATIVE Z-COMPONENT (IN THE ROTATED COORDINATE
+!!   SYSTEM) OF THE NEW NODE ON RETURN FROM GETNP.
+!!
+!      SUM = 0.
+!      NPTS(1) = KK
+!      LM1 = LMIN - 1
+!      DO 1 LNP = 2,LM1
+!        CALL GETNP (X,Y,Z,IADJ,IEND,LNP, NPTS, DF,IERR)
+!    1   SUM = SUM + 1. - DF*DF
+!!
+!!   ADD ADDITIONAL NODES TO NPTS UNTIL THE INCREASE IN
+!!     R = 1+RF IS AT LEAST RTOL.
+!!
+!      DO 2 LNP = LMIN,LMAX
+!        CALL GETNP (X,Y,Z,IADJ,IEND,LNP, NPTS, RF,IERR)
+!        IF (RF-DF .GE. RTOL) GO TO 3
+!    2   SUM = SUM + 1. - RF*RF
+!!
+!!   USE ALL LMAX NODES IN THE LEAST SQUARES FIT.  R IS
+!!     ARBITRARILY INCREASED BY 5 PER CENT.
+!!
+!      RF = 1.05*RF + .05
+!      LNP = LMAX + 1
+!!
+!!   THERE ARE LNP-2 EQUATIONS CORRESPONDING TO NODES
+!!     NPTS(2),...,NPTS(LNP-1).
+!!
+!    3 AVSQ = SUM/FLOAT(LNP-2)
+!      AV = SQRT(AVSQ)
+!      RIN = 1./(1.+RF)
+!!
+!! CONSTRUCT THE ROTATION
+!!
+!      CALL CONSTR (X(KK),Y(KK),Z(KK), CX,SX,CY,SY)
+!!
+!! SET UP THE FIRST 5 EQUATIONS OF THE AUGMENTED REGRESSION
+!!   MATRIX (TRANSPOSED) AS THE COLUMNS OF A, AND ZERO OUT
+!!   THE LOWER TRIANGLE (UPPER TRIANGLE OF A) WITH GIVENS
+!!   ROTATIONS
+!!
+!      DO 5 I = 1,5
+!        NP = NPTS(I+1)
+!        CALL APLYR (X(NP),Y(NP),Z(NP),CX,SX,CY,SY, XP,YP,ZP)
+!        WT = 1./(1.-ZP) - RIN
+!        CALL SETUP (XP,YP,W(NP),WK,AV,AVSQ,WT, A(1,I))
+!        IF (I .EQ. 1) GO TO 5
+!        IM1 = I - 1
+!        DO 4 J = 1,IM1
+!          JP1 = J + 1
+!          L = 6 - J
+!          CALL GIVENS ( A(J,J),A(J,I), C,S)
+!    4     CALL ROTATE (L,C,S, A(JP1,J),A(JP1,I) )
+!    5   CONTINUE
+!!
+!! ADD THE ADDITIONAL EQUATIONS TO THE SYSTEM USING
+!!   THE LAST COLUMN OF A -- I .LE. LNP.
+!!
+!      I = 7
+!    6   IF (I .EQ. LNP) GO TO 8
+!        NP = NPTS(I)
+!        CALL APLYR (X(NP),Y(NP),Z(NP),CX,SX,CY,SY, XP,YP,ZP)
+!        WT = 1./(1.-ZP) - RIN
+!        CALL SETUP (XP,YP,W(NP),WK,AV,AVSQ,WT, A(1,6))
+!        DO 7 J = 1,5
+!          JP1 = J + 1
+!          L = 6 - J
+!          CALL GIVENS ( A(J,J),A(J,6), C,S)
+!    7     CALL ROTATE (L,C,S, A(JP1,J),A(JP1,6) )
+!        I = I + 1
+!        GO TO 6
+!!
+!! TEST THE SYSTEM FOR ILL-CONDITIONING
+!!
+!    8 DMIN = AMIN1( ABS(A(1,1)),ABS(A(2,2)),ABS(A(3,3)), &
+!                    ABS(A(4,4)),ABS(A(5,5)) )
+!      IF (DMIN .GE. DTOL) GO TO 12
+!      IF (LNP .GT. LMAX) GO TO 9
+!!
+!! ADD ANOTHER NODE TO THE SYSTEM AND INCREASE R --
+!!   I .EQ. LNP
+!!
+!      LNP = LNP + 1
+!      IF (LNP .LE. LMAX) CALL GETNP (X,Y,Z,IADJ,IEND,LNP, &
+!                                     NPTS, RF,IERR)
+!      RIN = 1./(1.05*(1.+RF))
+!      GO TO 6
+!!
+!! STABILIZE THE SYSTEM BY DAMPING SECOND PARTIALS --ADD
+!!   MULTIPLES OF THE FIRST THREE UNIT VECTORS TO THE FIRST
+!!   THREE EQUATIONS.
+!!
+!    9 DO 11 I = 1,3
+!        A(I,6) = SF
+!        IP1 = I + 1
+!        DO 10 J = IP1,6
+!   10     A(J,6) = 0.
+!        DO 11 J = I,5
+!          JP1 = J + 1
+!          L = 6 - J
+!          CALL GIVENS ( A(J,J),A(J,6), C,S)
+!   11     CALL ROTATE (L,C,S, A(JP1,J),A(JP1,6) )
+!!
+!! TEST THE LINEAR PORTION OF THE STABILIZED SYSTEM FOR
+!!   ILL-CONDITIONING
+!!
+!      DMIN = AMIN1( ABS(A(4,4)),ABS(A(5,5)) )
+!      IF (DMIN .LT. DTOL) GO TO 14
+!!
+!! SOLVE THE 2 BY 2 TRIANGULAR SYSTEM FOR THE ESTIMATED
+!!   PARTIAL DERIVATIVES
+!!
+!   12 DY = A(6,5)/A(5,5)
+!      DX = (A(6,4) - A(5,4)*DY)/A(4,4)/AV
+!      DY = DY/AV
+!!
+!! ROTATE THE GRADIENT (DX,DY,0) BACK INTO THE ORIGINAL
+!!   COORDINATE SYSTEM
+!!
+!      CALL APLYRT (DX,DY,CX,SX,CY,SY, G)
+!      IER = LNP - 1
+!      RETURN
+!!
+!! N OR K IS OUT OF RANGE
+!!
+!   13 IER = -1
+!      RETURN
+!!
+!! NO UNIQUE SOLUTION DUE TO COLLINEAR NODES
+!!
+!   14 IER = -2
+!      RETURN
+!      END
       SUBROUTINE WVAL (B1,B2,B3,V1,V2,V3,W1,W2,W3,G1,G2,G3, &
                        IFLAG, PW,PG)
       INTEGER( kind = 4) IFLAG
