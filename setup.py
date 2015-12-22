@@ -10,8 +10,8 @@ if __name__ == "__main__":
           author_email      = "jeffrey.s.whitaker@noaa.gov",
           url               = "https://github.com/jswhit/stripack",
           download_url      = "https://github.com/jswhit/stripack/releases",
-          version           = "1.0",
-          description       = "Python interface to TOMS 772 (STRIPACK) fortran code",
+          version           = "1.1",
+          description       = "Python interface to STRIPACK fortran code for triangulation/interpolation on a sphere",
           ext_modules       = [ext],
           packages          = ['stripack'],
           )

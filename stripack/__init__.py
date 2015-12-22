@@ -1,7 +1,7 @@
 import  _stripack
 import numpy as np
 
-__version__ = "1.0"
+__version__ = "1.1"
 
 class trmesh(object):
     def __init__(self, lons, lats):
@@ -138,7 +138,7 @@ if __name__ == "__main__":
         icos_data = test_func(lons,lats)
         # triangulation
         tri = trmesh(lons, lats)
-        # output mesh 
+        # output mesh
         delta = 360./nlons
         olons = delta*np.arange(nlons)
         if nlats is None: nlats = nlons/2+1
