@@ -68,7 +68,7 @@ given a triangulation, perform interpolation on
 oints olons,olats (in radians), return result in data.
 olons, olats can be 1d or 2d (output data array has same shape as olats,lons).
 order of interpolation specified by 'order' kwarg, can be 0 (nearest neighbor),
-or 1 (linear)."""
+1 (linear), or 3 (hermite cubic)."""
         shapeout = olons.shape
         if len(shapeout) not in [1,2]:
             raise ValueError('olons,olats must be 1d or 2d')
@@ -85,8 +85,8 @@ or 1 (linear)."""
             raise ValueError('lons and lats must have same length')
         if len(data) != self.npts:
             raise ValueError('input data wrong size')
-        if order not in [0,1]:
-            raise ValueError('order must be 0,1')
+        if order not in [0,1,3]:
+            raise ValueError('order must be 0,1 or 3')
         else:
             odata,ierr = \
             _stripack.interp_n(order, olats1, olons1,\
@@ -103,6 +103,10 @@ same as interp(olons,olats,data,order=0)"""
         """
 same as interp(olons,olats,data,order=1)"""
         return self.interp(olons,olats,data,order=1)
+    def interp_cubic(self,olons,olats,data):
+        """
+same as interp(olons,olats,data,order=3)"""
+        return self.interp(olons,olats,data,order=3)
 
 if __name__ == "__main__":
     # test function.
