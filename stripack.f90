@@ -6321,148 +6321,303 @@ SUBROUTINE INTERP (N,ORDER,PLAT,PLON,X,Y,Z,W,LIST,LPTR,&
               F9.6/1H ,19X,5HP2 = ,2(F9.6,3H,  ),F9.6)
       STOP
       END
-      SUBROUTINE GETNP (X,Y,Z,IADJ,IEND,L, NPTS, DF,IER)
-      INTEGER( kind = 4 ) IADJ(1), IEND(1), L, NPTS(L), IER
-      REAL( kind = 8)    X(1), Y(1), Z(1), DF
-!
+SUBROUTINE GETNP (x,y,z,list,lptr,lend,l,npts,df,ier)
+
+! Code converted using TO_F90 by Alan Miller
+! Date: 2015-12-20  Time: 09:52:20
+
+REAL( kind = 8 ), INTENT(IN)                         :: x(*)
+REAL( kind = 8 ), INTENT(IN)                         :: y(*)
+REAL( kind = 8 ), INTENT(IN)                         :: z(*)
+INTEGER( kind = 4 ), INTENT(IN OUT)                  :: list(*)
+INTEGER( kind = 4 ), INTENT(IN)                      :: lptr(*)
+INTEGER( kind = 4 ), INTENT(OUT)                     :: lend(*)
+INTEGER( kind = 4 ), INTENT(IN)                      :: l
+INTEGER( kind = 4 ), INTENT(IN OUT)                  :: npts(l)
+REAL( kind = 8 ), INTENT(OUT)                        :: df
+INTEGER( kind = 4 ), INTENT(OUT)                     :: ier
+
+
+
 !***********************************************************
-!
-!                                               ROBERT RENKA
-!                                       OAK RIDGE NATL. LAB.
-!                                             (615) 576-5139
-!
-!   GIVEN A THIESSEN TRIANGULATION OF N NODES ON THE UNIT
-! SPHERE AND AN ARRAY NPTS CONTAINING THE INDICES OF L-1
-! NODES ORDERED BY ANGULAR DISTANCE FROM NPTS(1), THIS SUB-
-! ROUTINE SETS NPTS(L) TO THE INDEX OF THE NEXT NODE IN THE
-! SEQUENCE -- THE NODE, OTHER THAN NPTS(1),...,NPTS(L-1),
-! WHICH IS CLOSEST TO NPTS(1).  THUS, THE ORDERED SEQUENCE
-! OF K CLOSEST NODES TO N1 (INCLUDING N1) MAY BE DETERMINED
-! BY K-1 CALLS TO GETNP WITH NPTS(1) = N1 AND L = 2,3,...,K
-! FOR K .GE. 2.
-!   THE ALGORITHM USES THE FACT THAT, IN A THIESSEN TRIAN-
-! GULATION, THE K-TH CLOSEST NODE TO A GIVEN NODE N1 IS A
-! NEIGHBOR OF ONE OF THE K-1 CLOSEST NODES TO N1.
-!
-! INPUT PARAMETERS - X,Y,Z - VECTORS OF LENGTH N CONTAINING
-!                            THE CARTESIAN COORDINATES OF
-!                            THE NODES.
-!
-!                     IADJ - SET OF ADJACENCY LISTS OF NODES
-!                            IN THE TRIANGULATION.
-!
-!                     IEND - POINTERS TO THE ENDS OF ADJA-
-!                            CENCY LISTS FOR EACH NODE IN
-!                            THE TRIANGULATION.
-!
-!                        L - NUMBER OF NODES IN THE SEQUENCE
-!                            ON OUTPUT.  2 .LE. L .LE. N.
-!
-!                     NPTS - ARRAY OF LENGTH .GE. L CONTAIN-
-!                            ING THE INDICES OF THE L-1
-!                            CLOSEST NODES TO NPTS(1) IN THE
-!                            FIRST L-1 LOCATIONS.
-!
-! IADJ AND IEND MAY BE CREATED BY SUBROUTINE TRMESH.
-!
-! INPUT PARAMETERS OTHER THAN NPTS ARE NOT ALTERED BY THIS
-!   ROUTINE.
-!
-! OUTPUT PARAMETERS - NPTS - UPDATED WITH THE INDEX OF THE
-!                            L-TH CLOSEST NODE TO NPTS(1) IN
-!                            POSITION L UNLESS IER = 1.
-!
-!                       DF - INCREASING FUNCTION (NEGATIVE
-!                            COSINE) OF THE ANGULAR DISTANCE
-!                            BETWEEN NPTS(1) AND NPTS(L)
-!                            UNLESS IER = 1.
-!
-!                      IER - ERROR INDICATOR
-!                            IER = 0 IF NO ERRORS WERE EN-
-!                                    COUNTERED.
-!                            IER = 1 IF L IS OUT OF RANGE.
-!
-! MODULES REFERENCED BY GETNP - NONE
-!
-! INTRINSIC FUNCTION CALLED BY GETNP - IABS
-!
+
+!                                              From STRIPACK
+!                                            Robert J. Renka
+!                                  Dept. of Computer Science
+!                                       Univ. of North Texas
+!                                           renka@cs.unt.edu
+!                                                   07/28/98
+
+!   Given a Delaunay triangulation of N nodes on the unit
+! sphere and an array NPTS containing the indexes of L-1
+! nodes ordered by angular distance from NPTS(1), this sub-
+! routine sets NPTS(L) to the index of the next node in the
+! sequence -- the node, other than NPTS(1),...,NPTS(L-1),
+! that is closest to NPTS(1).  Thus, the ordered sequence
+! of K closest nodes to N1 (including N1) may be determined
+! by K-1 calls to GETNP with NPTS(1) = N1 and L = 2,3,...,K
+! for K .GE. 2.
+
+!   The algorithm uses the property of a Delaunay triangula-
+! tion that the K-th closest node to N1 is a neighbor of one
+! of the K-1 closest nodes to N1.
+
+
+! On input:
+
+!       X,Y,Z = Arrays of length N containing the Cartesian
+!               coordinates of the nodes.
+
+!       LIST,LPTR,LEND = Triangulation data structure.  Re-
+!                        fer to Subroutine TRMESH.
+
+!       L = Number of nodes in the sequence on output.  2
+!           .LE. L .LE. N.
+
+! The above parameters are not altered by this routine.
+
+!       NPTS = Array of length .GE. L containing the indexes
+!              of the L-1 closest nodes to NPTS(1) in the
+!              first L-1 locations.
+
+! On output:
+
+!       NPTS = Array updated with the index of the L-th
+!              closest node to NPTS(1) in position L unless
+!              IER = 1.
+
+!       DF = Value of an increasing function (negative cos-
+!            ine) of the angular distance between NPTS(1)
+!            and NPTS(L) unless IER = 1.
+
+!       IER = Error indicator:
+!             IER = 0 if no errors were encountered.
+!             IER = 1 if L < 2.
+
+! Modules required by GETNP:  None
+
+! Intrinsic function called by GETNP:  ABS
+
 !***********************************************************
-!
-      INTEGER( kind = 4) LM1, N1, I, NI, NP, INDF, INDL, INDX, NB
-      REAL( kind = 8)   X1, Y1, Z1, DNP, DNB
-!
-! LOCAL PARAMETERS -
-!
-! LM1 =      L - 1
+
+INTEGER( kind = 4 ) :: i, lm1, lp, lpl, n1, nb, ni, np
+REAL( kind = 8 ) :: dnb, dnp, x1, y1, z1
+
+! Local parameters:
+
+! DNB,DNP =  Negative cosines of the angular distances from
+!              N1 to NB and to NP, respectively
+! I =        NPTS index and DO-loop index
+! LM1 =      L-1
+! LP =       LIST pointer of a neighbor of NI
+! LPL =      Pointer to the last neighbor of NI
 ! N1 =       NPTS(1)
-! I =        NPTS INDEX AND DO-LOOP INDEX
+! NB =       Neighbor of NI and candidate for NP
 ! NI =       NPTS(I)
-! NP =       CANDIDATE FOR NPTS(L)
-! INDF =     IADJ INDEX OF THE FIRST NEIGHBOR OF NI
-! INDL =     IADJ INDEX OF THE LAST NEIGHBOR OF NI
-! INDX =     IADJ INDEX IN THE RANGE INDF,...,INDL
-! NB =       NEIGHBOR OF NI AND CANDIDATE FOR NP
-! X1,Y1,Z1 = COORDINATES OF N1
-! DNP,DNB =  NEGATIVE COSINES OF THE ANGULAR DISTANCES FROM
-!              N1 TO NP AND TO NB, RESPECTIVELY
-!
-      LM1 = L - 1
-      IF (LM1 .LT. 1) GO TO 4
-      IER = 0
-      N1 = NPTS(1)
-      X1 = X(N1)
-      Y1 = Y(N1)
-      Z1 = Z(N1)
-!
-! MARK THE ELEMENTS OF NPTS
-!
-      DO 1 I = 1,LM1
-        NI = NPTS(I)
-    1   IEND(NI) = -IEND(NI)
-!
-! CANDIDATES FOR NP = NPTS(L) ARE THE UNMARKED NEIGHBORS
-!   OF NODES IN NPTS.  DNP IS INITIALIZED TO -COS(PI) --
-!   THE MAXIMUM DISTANCE.
-!
-      DNP = 1.
-!
-! LOOP ON NODES NI IN NPTS
-!
-      DO 2 I = 1,LM1
-        NI = NPTS(I)
-        INDF = 1
-        IF (NI .GT. 1) INDF = IABS(IEND(NI-1)) + 1
-        INDL = -IEND(NI)
-!
-! LOOP ON NEIGHBORS NB OF NI
-!
-        DO 2 INDX = INDF,INDL
-          NB = IADJ(INDX)
-          IF (NB .EQ. 0  .OR.  IEND(NB) .LT. 0) GO TO 2
-!
-! NB IS AN UNMARKED NEIGHBOR OF NI.  REPLACE NP IF NB IS
-!   CLOSER TO N1.
-!
-          DNB = -(X(NB)*X1 + Y(NB)*Y1 + Z(NB)*Z1)
-          IF (DNB .GE. DNP) GO TO 2
-          NP = NB
-          DNP = DNB
-    2     CONTINUE
-      NPTS(L) = NP
-      DF = DNP
-!
-! UNMARK THE ELEMENTS OF NPTS
-!
-      DO 3 I = 1,LM1
-        NI = NPTS(I)
-    3   IEND(NI) = -IEND(NI)
-      RETURN
-!
-! L IS OUT OF RANGE
-!
-    4 IER = 1
-      RETURN
-      END
+! NP =       Candidate for NPTS(L)
+! X1,Y1,Z1 = Coordinates of N1
+
+lm1 = l - 1
+IF (lm1 < 1) GO TO 6
+ier = 0
+
+! Store N1 = NPTS(1) and mark the elements of NPTS.
+
+n1 = npts(1)
+x1 = x(n1)
+y1 = y(n1)
+z1 = z(n1)
+DO  i = 1,lm1
+  ni = npts(i)
+  lend(ni) = -lend(ni)
+END DO
+
+! Candidates for NP = NPTS(L) are the unmarked neighbors
+!   of nodes in NPTS.  DNP is initially greater than -cos(PI)
+!   (the maximum distance).
+
+dnp = 2.
+
+! Loop on nodes NI in NPTS.
+
+DO  i = 1,lm1
+  ni = npts(i)
+  lpl = -lend(ni)
+  lp = lpl
+  
+! Loop on neighbors NB of NI.
+  
+  2   nb = ABS(list(lp))
+  IF (lend(nb) < 0) GO TO 3
+  
+! NB is an unmarked neighbor of NI.  Replace NP if NB is
+!   closer to N1.
+  
+  dnb = -(x(nb)*x1 + y(nb)*y1 + z(nb)*z1)
+  IF (dnb >= dnp) GO TO 3
+  np = nb
+  dnp = dnb
+  3     lp = lptr(lp)
+  IF (lp /= lpl) GO TO 2
+END DO
+npts(l) = np
+df = dnp
+
+! Unmark the elements of NPTS.
+
+DO  i = 1,lm1
+  ni = npts(i)
+  lend(ni) = -lend(ni)
+END DO
+RETURN
+
+! L is outside its valid range.
+
+6 ier = 1
+RETURN
+END SUBROUTINE getnp
+!      SUBROUTINE GETNP (X,Y,Z,IADJ,IEND,L, NPTS, DF,IER)
+!      INTEGER( kind = 4 ) IADJ(1), IEND(1), L, NPTS(L), IER
+!      REAL( kind = 8)    X(1), Y(1), Z(1), DF
+!!
+!!***********************************************************
+!!
+!!                                               ROBERT RENKA
+!!                                       OAK RIDGE NATL. LAB.
+!!                                             (615) 576-5139
+!!
+!!   GIVEN A THIESSEN TRIANGULATION OF N NODES ON THE UNIT
+!! SPHERE AND AN ARRAY NPTS CONTAINING THE INDICES OF L-1
+!! NODES ORDERED BY ANGULAR DISTANCE FROM NPTS(1), THIS SUB-
+!! ROUTINE SETS NPTS(L) TO THE INDEX OF THE NEXT NODE IN THE
+!! SEQUENCE -- THE NODE, OTHER THAN NPTS(1),...,NPTS(L-1),
+!! WHICH IS CLOSEST TO NPTS(1).  THUS, THE ORDERED SEQUENCE
+!! OF K CLOSEST NODES TO N1 (INCLUDING N1) MAY BE DETERMINED
+!! BY K-1 CALLS TO GETNP WITH NPTS(1) = N1 AND L = 2,3,...,K
+!! FOR K .GE. 2.
+!!   THE ALGORITHM USES THE FACT THAT, IN A THIESSEN TRIAN-
+!! GULATION, THE K-TH CLOSEST NODE TO A GIVEN NODE N1 IS A
+!! NEIGHBOR OF ONE OF THE K-1 CLOSEST NODES TO N1.
+!!
+!! INPUT PARAMETERS - X,Y,Z - VECTORS OF LENGTH N CONTAINING
+!!                            THE CARTESIAN COORDINATES OF
+!!                            THE NODES.
+!!
+!!                     IADJ - SET OF ADJACENCY LISTS OF NODES
+!!                            IN THE TRIANGULATION.
+!!
+!!                     IEND - POINTERS TO THE ENDS OF ADJA-
+!!                            CENCY LISTS FOR EACH NODE IN
+!!                            THE TRIANGULATION.
+!!
+!!                        L - NUMBER OF NODES IN THE SEQUENCE
+!!                            ON OUTPUT.  2 .LE. L .LE. N.
+!!
+!!                     NPTS - ARRAY OF LENGTH .GE. L CONTAIN-
+!!                            ING THE INDICES OF THE L-1
+!!                            CLOSEST NODES TO NPTS(1) IN THE
+!!                            FIRST L-1 LOCATIONS.
+!!
+!! IADJ AND IEND MAY BE CREATED BY SUBROUTINE TRMESH.
+!!
+!! INPUT PARAMETERS OTHER THAN NPTS ARE NOT ALTERED BY THIS
+!!   ROUTINE.
+!!
+!! OUTPUT PARAMETERS - NPTS - UPDATED WITH THE INDEX OF THE
+!!                            L-TH CLOSEST NODE TO NPTS(1) IN
+!!                            POSITION L UNLESS IER = 1.
+!!
+!!                       DF - INCREASING FUNCTION (NEGATIVE
+!!                            COSINE) OF THE ANGULAR DISTANCE
+!!                            BETWEEN NPTS(1) AND NPTS(L)
+!!                            UNLESS IER = 1.
+!!
+!!                      IER - ERROR INDICATOR
+!!                            IER = 0 IF NO ERRORS WERE EN-
+!!                                    COUNTERED.
+!!                            IER = 1 IF L IS OUT OF RANGE.
+!!
+!! MODULES REFERENCED BY GETNP - NONE
+!!
+!! INTRINSIC FUNCTION CALLED BY GETNP - IABS
+!!
+!!***********************************************************
+!!
+!      INTEGER( kind = 4) LM1, N1, I, NI, NP, INDF, INDL, INDX, NB
+!      REAL( kind = 8)   X1, Y1, Z1, DNP, DNB
+!!
+!! LOCAL PARAMETERS -
+!!
+!! LM1 =      L - 1
+!! N1 =       NPTS(1)
+!! I =        NPTS INDEX AND DO-LOOP INDEX
+!! NI =       NPTS(I)
+!! NP =       CANDIDATE FOR NPTS(L)
+!! INDF =     IADJ INDEX OF THE FIRST NEIGHBOR OF NI
+!! INDL =     IADJ INDEX OF THE LAST NEIGHBOR OF NI
+!! INDX =     IADJ INDEX IN THE RANGE INDF,...,INDL
+!! NB =       NEIGHBOR OF NI AND CANDIDATE FOR NP
+!! X1,Y1,Z1 = COORDINATES OF N1
+!! DNP,DNB =  NEGATIVE COSINES OF THE ANGULAR DISTANCES FROM
+!!              N1 TO NP AND TO NB, RESPECTIVELY
+!!
+!      LM1 = L - 1
+!      IF (LM1 .LT. 1) GO TO 4
+!      IER = 0
+!      N1 = NPTS(1)
+!      X1 = X(N1)
+!      Y1 = Y(N1)
+!      Z1 = Z(N1)
+!!
+!! MARK THE ELEMENTS OF NPTS
+!!
+!      DO 1 I = 1,LM1
+!        NI = NPTS(I)
+!    1   IEND(NI) = -IEND(NI)
+!!
+!! CANDIDATES FOR NP = NPTS(L) ARE THE UNMARKED NEIGHBORS
+!!   OF NODES IN NPTS.  DNP IS INITIALIZED TO -COS(PI) --
+!!   THE MAXIMUM DISTANCE.
+!!
+!      DNP = 1.
+!!
+!! LOOP ON NODES NI IN NPTS
+!!
+!      DO 2 I = 1,LM1
+!        NI = NPTS(I)
+!        INDF = 1
+!        IF (NI .GT. 1) INDF = IABS(IEND(NI-1)) + 1
+!        INDL = -IEND(NI)
+!!
+!! LOOP ON NEIGHBORS NB OF NI
+!!
+!        DO 2 INDX = INDF,INDL
+!          NB = IADJ(INDX)
+!          IF (NB .EQ. 0  .OR.  IEND(NB) .LT. 0) GO TO 2
+!!
+!! NB IS AN UNMARKED NEIGHBOR OF NI.  REPLACE NP IF NB IS
+!!   CLOSER TO N1.
+!!
+!          DNB = -(X(NB)*X1 + Y(NB)*Y1 + Z(NB)*Z1)
+!          IF (DNB .GE. DNP) GO TO 2
+!          NP = NB
+!          DNP = DNB
+!    2     CONTINUE
+!      NPTS(L) = NP
+!      DF = DNP
+!!
+!! UNMARK THE ELEMENTS OF NPTS
+!!
+!      DO 3 I = 1,LM1
+!        NI = NPTS(I)
+!    3   IEND(NI) = -IEND(NI)
+!      RETURN
+!!
+!! L IS OUT OF RANGE
+!!
+!    4 IER = 1
+!      RETURN
+!      END
       SUBROUTINE INTRC1 (N,PLAT,PLON,X,Y,Z,W,IADJ,IEND, &
                          IFLAG,GRAD, IST, PW,IER)
       INTEGER( kind = 4) N, IADJ(6*(N-1)), IEND(N), IFLAG, IST, IER
