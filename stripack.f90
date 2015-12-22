@@ -5508,9 +5508,9 @@ subroutine trmesh ( n, x, y, z, list, lptr, lend, ier )
 end
 
 
-SUBROUTINE INTERP (N,NNEIGHBOR,PLAT,PLON,X,Y,Z,W,LIST,LPTR,&
+SUBROUTINE INTERP (N,ORDER,PLAT,PLON,X,Y,Z,W,LIST,LPTR,&
                          LEND, IST, PW, IER)
-  logical, intent(in) :: nneighbor
+  integer, intent(in) :: order
   INTEGER( kind = 4 ) N, LIST(*), LPTR(*), LEND(N), IST, IER
   REAL( kind = 8 )    PLAT, PLON, X(N), Y(N), Z(N), W(N), PW
 !
@@ -5629,7 +5629,7 @@ SUBROUTINE INTERP (N,NNEIGHBOR,PLAT,PLON,X,Y,Z,W,LIST,LPTR,&
       IST = I1
       IF (I3 .NE. 0) THEN
 !
-      if (nneighbor) then
+      if (order == 0) then
           P1(1) = X(I1)
           P1(2) = Y(I1)
           P1(3) = Z(I1)
@@ -5819,6 +5819,1639 @@ SUBROUTINE INTERP (N,NNEIGHBOR,PLAT,PLON,X,Y,Z,W,LIST,LPTR,&
       ENDIF
       RETURN
       END
+      SUBROUTINE APLYR (X,Y,Z,CX,SX,CY,SY, XP,YP,ZP)
+      REAL( kind = 8 ) X, Y, Z, CX, SX, CY, SY, XP, YP, ZP
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   THIS SUBROUTINE APPLIES THE ROTATION R DEFINED BY SUB-
+! ROUTINE CONSTR TO THE UNIT VECTOR (X Y Z)**T, I.E. (X,Y,Z)
+! IS ROTATED TO (XP,YP,ZP).  IF (XP,YP,ZP) LIES IN THE
+! SOUTHERN HEMISPHERE (ZP .LT. 0), (XP,YP) ARE SET TO THE
+! COORDINATES OF THE NEAREST POINT OF THE EQUATOR, ZP RE-
+! MAINING UNCHANGED.
+!
+! INPUT PARAMETERS - X,Y,Z - COORDINATES OF A POINT ON THE
+!                            UNIT SPHERE.
+!
+!              CX,SX,CY,SY - ELEMENTS OF THE ROTATION DE-
+!                            FINED BY CONSTR.
+!
+! INPUT PARAMETERS ARE NOT ALTERED EXCEPT AS NOTED BELOW.
+!
+! OUTPUT PARAMETERS - XP,YP,ZP - COORDINATES OF THE ROTATED
+!                                POINT ON THE SPHERE UNLESS
+!                                ZP .LT. 0, IN WHICH CASE
+!                                (XP,YP,0) IS THE CLOSEST
+!                                POINT OF THE EQUATOR TO THE
+!                                ROTATED POINT.  STORAGE FOR
+!                                XP, YP, AND ZP MAY COINCIDE
+!                                WITH STORAGE FOR X, Y, AND
+!                                Z, RESPECTIVELY, IF THE
+!                                LATTER NEED NOT BE SAVED.
+!
+! MODULES REFERENCED BY APLYR - NONE
+!
+! INTRINSIC FUNCTION CALLED BY APLYR - SQRT
+!
+!***********************************************************
+!
+      REAL( kind = 8 ) T
+!
+! LOCAL PARAMETER -
+!
+! T = TEMPORARY VARIABLE
+!
+      T = SX*Y + CX*Z
+      YP = CX*Y - SX*Z
+      ZP = SY*X + CY*T
+      XP = CY*X - SY*T
+      IF (ZP .GE. 0.) RETURN
+!
+! MOVE (XP,YP,ZP) TO THE EQUATOR
+!
+      T = SQRT(XP*XP + YP*YP)
+      IF (T .EQ. 0.) GO TO 1
+      XP = XP/T
+      YP = YP/T
+      RETURN
+!
+! MOVE THE SOUTH POLE TO AN ARBITRARY POINT OF THE EQUATOR
+!
+    1 XP = 1.
+      YP = 0.
+      RETURN
+      END
+      SUBROUTINE APLYRT (G1P,G2P,CX,SX,CY,SY, G)
+      REAL( kind = 8 ) G1P, G2P, CX, SX, CY, SY, G(3)
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   THIS SUBROUTINE APPLIES THE INVERSE (TRANSPOSE) OF THE
+! ROTATION DEFINED BY SUBROUTINE CONSTR TO THE VECTOR
+! (G1P G2P 0)**T, I.E. THE GRADIENT (G1P,G2P,0) IN THE ROT-
+! ATED COORDINATE SYSTEM IS MAPPED TO (G1,G2,G3) IN THE
+! ORIGINAL COORDINATE SYSTEM.
+!
+! INPUT PARAMETERS - G1P,G2P - X- AND Y-COMPONENTS, RESPECT-
+!                              IVELY, OF THE GRADIENT IN THE
+!                              ROTATED COORDINATE SYSTEM.
+!
+!                CX,SX,CY,SY - ELEMENTS OF THE ROTATION R
+!                              CONSTRUCTED BY SUBROUTINE
+!                              CONSTR.
+!
+! INPUT PARAMETERS ARE NOT ALTERED BY THIS ROUTINE.
+!
+! OUTPUT PARAMETERS - G - X-, Y-, AND Z-COMPONENTS (IN THAT
+!                         ORDER) OF THE INVERSE ROTATION
+!                         APPLIED TO (G1P,G2P,0) -- GRADIENT
+!                         IN THE ORIGINAL COORDINATE SYSTEM.
+!
+! MODULES REFERENCED BY APLYRT - NONE
+!
+!***********************************************************
+!
+      REAL( kind = 8 ) T
+!
+! LOCAL PARAMETERS -
+!
+! T = TEMPORARY VARIABLE
+!
+      T = SY*G1P
+      G(1) = CY*G1P
+      G(2) = CX*G2P - SX*T
+      G(3) = -SX*G2P - CX*T
+      RETURN
+      END
+      SUBROUTINE GIVENS ( A,B, C,S)
+      REAL( kind = 8 ) A, B, C, S
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   THIS ROUTINE CONSTRUCTS THE GIVENS PLANE ROTATION --
+!     ( C  S)
+! G = (     ) WHERE C*C + S*S = 1 -- WHICH ZEROS THE SECOND
+!     (-S  C)
+! ENTRY OF THE 2-VECTOR (A B)-TRANSPOSE.  A CALL TO GIVENS
+! IS NORMALLY FOLLOWED BY A CALL TO ROTATE WHICH APPLIES
+! THE TRANSFORMATION TO A 2 BY N MATRIX.  THIS ROUTINE WAS
+! TAKEN FROM LINPACK.
+!
+! INPUT PARAMETERS - A,B - COMPONENTS OF THE 2-VECTOR TO BE
+!                          ROTATED.
+!
+! OUTPUT PARAMETERS -  A - OVERWRITTEN BY R = +/-SQRT(A*A
+!                          + B*B)
+!
+!                      B - OVERWRITTEN BY A VALUE Z WHICH
+!                          ALLOWS C AND S TO BE RECOVERED
+!                          AS FOLLOWS -
+!                          C = SQRT(1-Z*Z), S=Z IF ABS(Z)
+!                              .LE. 1.
+!                          C = 1/Z, S = SQRT(1-C*C) IF
+!                              ABS(Z) .GT. 1.
+!
+!                      C - +/-(A/R)
+!
+!                      S - +/-(B/R)
+!
+! MODULES REFERENCED BY GIVENS - NONE
+!
+! INTRINSIC FUNCTIONS CALLED BY GIVENS - ABS, SQRT
+!
+!***********************************************************
+!
+      REAL( kind = 8 ) AA, BB, R, U, V
+!
+! LOCAL PARAMETERS -
+!
+! AA,BB = LOCAL COPIES OF A AND B
+! R =     C*A + S*B = +/-SQRT(A*A+B*B)
+! U,V =   VARIABLES USED TO SCALE A AND B FOR COMPUTING R
+!
+      AA = A
+      BB = B
+      IF (ABS(AA) .LE. ABS(BB)) GO TO 1
+!
+! ABS(A) .GT. ABS(B)
+!
+      U = AA + AA
+      V = BB/U
+      R = SQRT(.25 + V*V) * U
+      C = AA/R
+      S = V * (C + C)
+!
+! NOTE THAT R HAS THE SIGN OF A, C .GT. 0, AND S HAS
+!   SIGN(A)*SIGN(B)
+!
+      B = S
+      A = R
+      RETURN
+!
+! ABS(A) .LE. ABS(B)
+!
+    1 IF (BB .EQ. 0.) GO TO 2
+      U = BB + BB
+      V = AA/U
+!
+! STORE R IN A
+!
+      A = SQRT(.25 + V*V) * U
+      S = BB/A
+      C = V * (S + S)
+!
+! NOTE THAT R HAS THE SIGN OF B, S .GT. 0, AND C HAS
+!   SIGN(A)*SIGN(B)
+!
+      B = 1.
+      IF (C .NE. 0.) B = 1./C
+      RETURN
+!
+! A = B = 0.
+!
+    2 C = 1.
+      S = 0.
+      RETURN
+      END
+      SUBROUTINE ROTATE (N,C,S, X,Y )
+      INTEGER( kind = 4) N
+      REAL( kind = 8 )    C, S, X(N), Y(N)
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!                                            ( C  S)
+!   THIS ROUTINE APPLIES THE GIVENS ROTATION (     ) TO THE
+!                                            (-S  C)
+!               (X(1) ... X(N))
+! 2 BY N MATRIX (             ).  THIS ROUTINE WAS TAKEN
+!               (Y(1) ... Y(N))
+! FROM LINPACK.
+!
+! INPUT PARAMETERS -   N - NUMBER OF COLUMNS TO BE ROTATED.
+!
+!                    C,S - ELEMENTS OF THE GIVENS ROTATION.
+!                          THESE MAY BE DETERMINED BY
+!                          SUBROUTINE GIVENS.
+!
+!                    X,Y - VECTORS OF LENGTH .GE. N
+!                          CONTAINING THE 2-VECTORS TO BE
+!                          ROTATED.
+!
+!   THE PARAMETERS N, C, AND S ARE NOT ALTERED BY THIS
+! ROUTINE.
+!
+! OUTPUT PARAMETERS - X,Y - ROTATED VECTORS
+!
+! MODULES REFERENCED BY ROTATE - NONE
+!
+!***********************************************************
+!
+      INTEGER( kind = 4) I
+      REAL( kind = 8 )    XI, YI
+!
+! LOCAL PARAMETERS -
+!
+! I =     DO-LOOP INDEX
+! XI,YI = X(I), Y(I)
+!
+      IF (N .LE. 0 .OR. (C .EQ. 1. .AND. S .EQ. 0.)) RETURN
+      DO 1 I = 1,N
+        XI = X(I)
+        YI = Y(I)
+        X(I) = C*XI + S*YI
+    1   Y(I) = -S*XI + C*YI
+      RETURN
+      END
+      SUBROUTINE SETUP (XI,YI,WI,WK,S1,S2,WT, ROW)
+      REAL( kind = 8 ) XI, YI, WI, WK, S1, S2, WT, ROW(6)
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   THIS SUBROUTINE SETS UP THE I-TH ROW OF AN AUGMENTED
+! REGRESSION MATRIX FOR A WEIGHTED LEAST SQUARES FIT OF A
+! QUADRATIC FUNCTION Q(X,Y) TO A SET OF DATA VALUES WI
+! WHERE Q(0,0) = WK.  THE FIRST 3 COLUMNS (QUADRATIC TERMS)
+! ARE SCALED BY 1/S2 AND THE FOURTH AND FIFTH COLUMNS (LIN-
+! EAR TERMS) ARE SCALED BY 1/S1.
+!
+! INPUT PARAMETERS - XI,YI - COORDINATES OF NODE I.
+!
+!                       WI - DATA VALUE AT NODE I.
+!
+!                       WK - DATA VALUE INTERPOLATED BY Q AT
+!                            THE ORIGIN.
+!
+!                    S1,S2 - INVERSE SCALE FACTORS.
+!
+!                       WT - WEIGHT FACTOR CORRESPONDING TO
+!                            THE I-TH EQUATION.
+!
+!                      ROW - VECTOR OF LENGTH 6.
+!
+! INPUT PARAMETERS ARE NOT ALTERED BY THIS ROUTINE.
+!
+! OUTPUT PARAMETER - ROW - VECTOR CONTAINING A ROW OF THE
+!                          AUGMENTED REGRESSION MATRIX.
+!
+! MODULES REFERENCED BY SETUP - NONE
+!
+!***********************************************************
+!
+      REAL( kind = 8 ) W1, W2
+!
+! LOCAL PARAMETERS -
+!
+! W1 = WEIGHTED SCALE FACTOR FOR THE LINEAR TERMS
+! W2 = WEIGHTED SCALE FACTOR FOR THE QUADRATIC TERMS
+!
+      W1 = WT/S1
+      W2 = WT/S2
+      ROW(1) = XI*XI*W2
+      ROW(2) = XI*YI*W2
+      ROW(3) = YI*YI*W2
+      ROW(4) = XI*W1
+      ROW(5) = YI*W1
+      ROW(6) = (WI-WK)*WT
+      RETURN
+      END
+      SUBROUTINE CONSTR (XK,YK,ZK, CX,SX,CY,SY)
+      REAL( kind = 8 ) XK, YK, ZK, CX, SX, CY, SY
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   THIS SUBROUTINE CONSTRUCTS THE ELEMENTS OF A 3 BY 3
+! ORTHOGONAL MATRIX R WHICH ROTATES A POINT (XK,YK,ZK) ON
+! THE UNIT SPHERE TO THE NORTH POLE, I.E.
+!
+!      (XK)     (CY  0 -SY)   (1   0   0)   (XK)     (0)
+!  R * (YK)  =  ( 0  1   0) * (0  CX -SX) * (YK)  =  (0)
+!      (ZK)     (SY  0  CY)   (0  SX  CX)   (ZK)     (1)
+!
+! INPUT PARAMETERS - XK,YK,ZK - COMPONENTS OF A UNIT VECTOR
+!                               TO BE ROTATED TO (0,0,1).
+!
+! INPUT PARAMETERS ARE NOT ALTERED BY THIS ROUTINE.
+!
+! OUTPUT PARAMETERS - CX,SX,CY,SY - ELEMENTS OF R -- CX,SX
+!                                   DEFINE A ROTATION ABOUT
+!                                   THE X-AXIS AND CY,SY DE-
+!                                   FINE A ROTATION ABOUT
+!                                   THE Y-AXIS.
+!
+! MODULES REFERENCED BY CONSTR - NONE
+!
+! INTRINSIC FUNCTION CALLED BY CONSTR - SQRT
+!
+!***********************************************************
+!
+      CY = SQRT(YK*YK + ZK*ZK)
+      SY = XK
+      IF (CY .EQ. 0.) GO TO 1
+      CX = ZK/CY
+      SX = YK/CY
+      RETURN
+!
+! (XK,YK,ZK) LIES ON THE X-AXIS
+!
+    1 CX = 1.
+      SX = 0.
+      RETURN
+      END
+      SUBROUTINE ARCINT (P,P1,P2,W1,W2,G1,G2, W,G,GN)
+      REAL( kind = 8 )    P(3), P1(3), P2(3), W1, W2, G1(3), G2(3), &
+              W, G(3), GN
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   GIVEN 3 POINTS P, P1, AND P2 LYING ON A COMMON GEODESIC
+! OF THE UNIT SPHERE WITH P BETWEEN P1 AND P2, ALONG WITH
+! DATA VALUES AND GRADIENTS AT P1 AND P2, THIS SUBROUTINE
+! COMPUTES AN INTERPOLATED VALUE W AND A GRADIENT VECTOR G
+! AT P.  W IS COMPUTED BY HERMITE CUBIC INTERPOLATION REL-
+! ATIVE TO ARC-LENGTH ALONG THE GEODESIC.  THE TANGENTIAL
+! COMPONENT OF G IS THE DERIVATIVE (WITH RESPECT TO ARC-
+! LENGTH) OF THE CUBIC INTERPOLANT AT P, WHILE THE NORMAL
+! COMPONENT OF G IS OBTAINED BY LINEAR INTERPOLATION OF THE
+! NORMAL COMPONENTS OF THE GRADIENTS AT P1 AND P2.  THIS
+! ALGORITHM IS DUE TO C. L. LAWSON.
+!
+! INPUT PARAMETERS - P - CARTESIAN COORDINATES OF A POINT
+!                        LYING ON THE ARC DEFINED BY P1 AND
+!                        P2.
+!
+!                P1,P2 - COORDINATES OF DISTINCT POINTS ON
+!                        THE UNIT SPHERE DEFINING AN ARC
+!                        WITH LENGTH LESS THAN 180 DEGREES.
+!
+!                W1,W2 - DATA VALUES ASSOCIATED WITH P1 AND
+!                        P2, RESPECTIVELY.
+!
+!                G1,G2 - GRADIENT VECTORS ASSOCIATED WITH P1
+!                        AND P2.  G1 AND G2 ARE ORTHOGONAL
+!                        TO P1 AND P2, RESPECTIVELY.
+!
+! THE ABOVE PARAMETERS ARE NOT ALTERED BY THIS ROUTINE.
+!
+!                    G - ARRAY OF LENGTH 3.
+!
+! OUTPUT PARAMETERS - W - INTERPOLATED VALUE AT P.
+!
+!                     G - INTERPOLATED GRADIENT AT P.
+!
+!                    GN - NORMAL COMPONENT OF G WITH THE
+!                         DIRECTION P1 X P2 TAKEN TO BE
+!                         POSITIVE.  THE EXTRAPOLATION
+!                         PROCEDURE REQUIRES THIS COMPONENT.
+!
+! FOR EACH VECTOR V, V(1), V(2), AND V(3) CONTAIN X-, Y-,
+!   AND Z-COMPONENTS, RESPECTIVELY.
+!
+! MODULES REFERENCED BY ARCINT - ARCLEN
+!
+! INTRINSIC FUNCTION CALLED BY ARCINT - SQRT
+!
+!***********************************************************
+!
+      INTEGER( kind = 4) I, LUN
+      REAL( kind = 8 )    UN(3), UNORM, TAU1, TAU2, A, AL, S, T, GT,&
+              ARCLEN
+      DATA    LUN/6/
+!
+! LOCAL PARAMETERS -
+!
+! I =         DO-LOOP INDEX
+! LUN =       LOGICAL UNIT FOR ERROR MESSAGES
+! UN =        UNIT NORMAL TO THE PLANE OF P, P1, AND P2
+! UNORM =     EUCLIDEAN NORM OF P1 X P2 -- USED TO NORMALIZE
+!               UN
+! TAU1,TAU2 = TANGENTIAL DERIVATIVES (COMPONENTS OF G1,G2)
+!               AT P1 AND P2
+! A =         ANGLE IN RADIANS (ARC-LENGTH) BETWEEN P1 AND
+!               P2
+! AL =        ARC-LENGTH BETWEEN P1 AND P
+! S =         NORMALIZED VALUE OF AL -- AS P VARIES FROM P1
+!               TO P2, S VARIES FROM 0 TO 1
+! T =         1-S -- S AND T ARE BARYCENTRIC COORDINATES OF
+!               P WITH RESPECT TO THE ARC FROM P1 TO P2
+! GT =        TANGENTIAL COMPONENT OF G -- COMPONENT IN THE
+!               DIRECTION UN X P
+!
+!
+! COMPUTE UNIT NORMAL UN
+!
+      UN(1) = P1(2)*P2(3) - P1(3)*P2(2)
+      UN(2) = P1(3)*P2(1) - P1(1)*P2(3)
+      UN(3) = P1(1)*P2(2) - P1(2)*P2(1)
+      UNORM = SQRT(UN(1)*UN(1) + UN(2)*UN(2) + UN(3)*UN(3))
+      IF (UNORM .EQ. 0.) GO TO 2
+!
+! NORMALIZE UN
+!
+      DO 1 I = 1,3
+    1   UN(I) = UN(I)/UNORM
+!
+! COMPUTE TANGENTIAL DERIVATIVES AT THE ENDPOINTS --
+!   TAU1 = (G1,UN X P1) = (G1,P2)/UNORM AND
+!   TAU2 = (G2,UN X P2) = -(G2,P1)/UNORM.
+!
+      TAU1 = (G1(1)*P2(1) + G1(2)*P2(2) + G1(3)*P2(3))/UNORM
+      TAU2 =-(G2(1)*P1(1) + G2(2)*P1(2) + G2(3)*P1(3))/UNORM
+!
+! COMPUTE ARC-LENGTHS A, AL
+!
+      A = ARCLEN(P1,P2)
+      IF (A .EQ. 0.) GO TO 2
+      AL = ARCLEN(P1,P)
+!
+! COMPUTE W BY HERMITE CUBIC INTERPOLATION
+!
+      S = AL/A
+      T = 1. - S
+      W = W1*(2.*S+1.)*T*T + W2*(3.-2.*S)*S*S + &
+          A*S*T*(TAU1*T - TAU2*S)
+!
+! COMPUTE TANGENTIAL AND NORMAL DERIVATIVES AT P
+!
+      GT = 6.*S*T*(W2-W1)/A + &
+           TAU1*T*(1.-3.*S) + TAU2*S*(3.*S-2.)
+      GN = T*(UN(1)*G1(1) + UN(2)*G1(2) + UN(3)*G1(3)) + &
+           S*(UN(1)*G2(1) + UN(2)*G2(2) + UN(3)*G2(3))
+!
+! COMPUTE G = GT*(UN X P) + GN*UN
+!
+      G(1) = GT*(UN(2)*P(3) - UN(3)*P(2)) + GN*UN(1)
+      G(2) = GT*(UN(3)*P(1) - UN(1)*P(3)) + GN*UN(2)
+      G(3) = GT*(UN(1)*P(2) - UN(2)*P(1)) + GN*UN(3)
+      RETURN
+!
+! P1 X P2 = 0.  PRINT AN ERROR MESSAGE AND TERMINATE
+!   PROCESSING.
+!
+    2 WRITE (LUN,100) (P1(I),I=1,3), (P2(I),I=1,3)
+  100 FORMAT (1H1,24HERROR IN ARCINT -- P1 = ,2(F9.6,3H,  ), &
+              F9.6/1H ,19X,5HP2 = ,2(F9.6,3H,  ),F9.6)
+      STOP
+      END
+      SUBROUTINE GETNP (X,Y,Z,IADJ,IEND,L, NPTS, DF,IER)
+      INTEGER( kind = 4 ) IADJ(1), IEND(1), L, NPTS(L), IER
+      REAL( kind = 8)    X(1), Y(1), Z(1), DF
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   GIVEN A THIESSEN TRIANGULATION OF N NODES ON THE UNIT
+! SPHERE AND AN ARRAY NPTS CONTAINING THE INDICES OF L-1
+! NODES ORDERED BY ANGULAR DISTANCE FROM NPTS(1), THIS SUB-
+! ROUTINE SETS NPTS(L) TO THE INDEX OF THE NEXT NODE IN THE
+! SEQUENCE -- THE NODE, OTHER THAN NPTS(1),...,NPTS(L-1),
+! WHICH IS CLOSEST TO NPTS(1).  THUS, THE ORDERED SEQUENCE
+! OF K CLOSEST NODES TO N1 (INCLUDING N1) MAY BE DETERMINED
+! BY K-1 CALLS TO GETNP WITH NPTS(1) = N1 AND L = 2,3,...,K
+! FOR K .GE. 2.
+!   THE ALGORITHM USES THE FACT THAT, IN A THIESSEN TRIAN-
+! GULATION, THE K-TH CLOSEST NODE TO A GIVEN NODE N1 IS A
+! NEIGHBOR OF ONE OF THE K-1 CLOSEST NODES TO N1.
+!
+! INPUT PARAMETERS - X,Y,Z - VECTORS OF LENGTH N CONTAINING
+!                            THE CARTESIAN COORDINATES OF
+!                            THE NODES.
+!
+!                     IADJ - SET OF ADJACENCY LISTS OF NODES
+!                            IN THE TRIANGULATION.
+!
+!                     IEND - POINTERS TO THE ENDS OF ADJA-
+!                            CENCY LISTS FOR EACH NODE IN
+!                            THE TRIANGULATION.
+!
+!                        L - NUMBER OF NODES IN THE SEQUENCE
+!                            ON OUTPUT.  2 .LE. L .LE. N.
+!
+!                     NPTS - ARRAY OF LENGTH .GE. L CONTAIN-
+!                            ING THE INDICES OF THE L-1
+!                            CLOSEST NODES TO NPTS(1) IN THE
+!                            FIRST L-1 LOCATIONS.
+!
+! IADJ AND IEND MAY BE CREATED BY SUBROUTINE TRMESH.
+!
+! INPUT PARAMETERS OTHER THAN NPTS ARE NOT ALTERED BY THIS
+!   ROUTINE.
+!
+! OUTPUT PARAMETERS - NPTS - UPDATED WITH THE INDEX OF THE
+!                            L-TH CLOSEST NODE TO NPTS(1) IN
+!                            POSITION L UNLESS IER = 1.
+!
+!                       DF - INCREASING FUNCTION (NEGATIVE
+!                            COSINE) OF THE ANGULAR DISTANCE
+!                            BETWEEN NPTS(1) AND NPTS(L)
+!                            UNLESS IER = 1.
+!
+!                      IER - ERROR INDICATOR
+!                            IER = 0 IF NO ERRORS WERE EN-
+!                                    COUNTERED.
+!                            IER = 1 IF L IS OUT OF RANGE.
+!
+! MODULES REFERENCED BY GETNP - NONE
+!
+! INTRINSIC FUNCTION CALLED BY GETNP - IABS
+!
+!***********************************************************
+!
+      INTEGER( kind = 4) LM1, N1, I, NI, NP, INDF, INDL, INDX, NB
+      REAL( kind = 8)   X1, Y1, Z1, DNP, DNB
+!
+! LOCAL PARAMETERS -
+!
+! LM1 =      L - 1
+! N1 =       NPTS(1)
+! I =        NPTS INDEX AND DO-LOOP INDEX
+! NI =       NPTS(I)
+! NP =       CANDIDATE FOR NPTS(L)
+! INDF =     IADJ INDEX OF THE FIRST NEIGHBOR OF NI
+! INDL =     IADJ INDEX OF THE LAST NEIGHBOR OF NI
+! INDX =     IADJ INDEX IN THE RANGE INDF,...,INDL
+! NB =       NEIGHBOR OF NI AND CANDIDATE FOR NP
+! X1,Y1,Z1 = COORDINATES OF N1
+! DNP,DNB =  NEGATIVE COSINES OF THE ANGULAR DISTANCES FROM
+!              N1 TO NP AND TO NB, RESPECTIVELY
+!
+      LM1 = L - 1
+      IF (LM1 .LT. 1) GO TO 4
+      IER = 0
+      N1 = NPTS(1)
+      X1 = X(N1)
+      Y1 = Y(N1)
+      Z1 = Z(N1)
+!
+! MARK THE ELEMENTS OF NPTS
+!
+      DO 1 I = 1,LM1
+        NI = NPTS(I)
+    1   IEND(NI) = -IEND(NI)
+!
+! CANDIDATES FOR NP = NPTS(L) ARE THE UNMARKED NEIGHBORS
+!   OF NODES IN NPTS.  DNP IS INITIALIZED TO -COS(PI) --
+!   THE MAXIMUM DISTANCE.
+!
+      DNP = 1.
+!
+! LOOP ON NODES NI IN NPTS
+!
+      DO 2 I = 1,LM1
+        NI = NPTS(I)
+        INDF = 1
+        IF (NI .GT. 1) INDF = IABS(IEND(NI-1)) + 1
+        INDL = -IEND(NI)
+!
+! LOOP ON NEIGHBORS NB OF NI
+!
+        DO 2 INDX = INDF,INDL
+          NB = IADJ(INDX)
+          IF (NB .EQ. 0  .OR.  IEND(NB) .LT. 0) GO TO 2
+!
+! NB IS AN UNMARKED NEIGHBOR OF NI.  REPLACE NP IF NB IS
+!   CLOSER TO N1.
+!
+          DNB = -(X(NB)*X1 + Y(NB)*Y1 + Z(NB)*Z1)
+          IF (DNB .GE. DNP) GO TO 2
+          NP = NB
+          DNP = DNB
+    2     CONTINUE
+      NPTS(L) = NP
+      DF = DNP
+!
+! UNMARK THE ELEMENTS OF NPTS
+!
+      DO 3 I = 1,LM1
+        NI = NPTS(I)
+    3   IEND(NI) = -IEND(NI)
+      RETURN
+!
+! L IS OUT OF RANGE
+!
+    4 IER = 1
+      RETURN
+      END
+      SUBROUTINE INTRC1 (N,PLAT,PLON,X,Y,Z,W,IADJ,IEND, &
+                         IFLAG,GRAD, IST, PW,IER)
+      INTEGER( kind = 4) N, IADJ(6*(N-1)), IEND(N), IFLAG, IST, IER
+      REAL( kind = 8 )    PLAT, PLON, X(N), Y(N), Z(N), W(N), &
+              GRAD(3,N), PW
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   GIVEN A TRIANGULATION OF A SET OF NODES ON THE UNIT
+! SPHERE, ALONG WITH DATA VALUES AT THE NODES, THIS SUB-
+! ROUTINE CONSTRUCTS THE VALUE AT A POINT P OF A ONCE CON-
+! TINUOUSLY DIFFERENTIABLE FUNCTION WHICH INTERPOLATES THE
+! DATA VALUES.  IF THE TRIANGULATION DOES NOT COVER THE
+! ENTIRE SPHERE, THE SURFACE IS EXTENDED CONTINUOUSLY BEYOND
+! THE BOUNDARY ALLOWING EXTRAPOLATION.
+!
+! INPUT PARAMETERS -     N - NUMBER OF NODES.  N .GE. 3 AND
+!                            N .GE. 7 IF IFLAG = 0.
+!
+!                PLAT,PLON - LATITUDE AND LONGITUDE OF P IN
+!                            RADIANS.
+!
+!                    X,Y,Z - VECTORS CONTAINING CARTESIAN
+!                            COORDINATES OF THE NODES.
+!
+!                        W - VECTOR CONTAINING DATA VALUES
+!                            AT THE NODES.  W(I) IS ASSOCI-
+!                            ATED WITH (X(I),Y(I),Z(I)) FOR
+!                            I = 1,...,N.
+!
+!                IADJ,IEND - DATA STRUCTURE REPRESENTING THE
+!                            TRIANGULATION.  SEE SUBROUTINE
+!                            TRMESH.
+!
+!                    IFLAG - OPTION INDICATOR
+!                            IFLAG = 0 IF INTRC1 IS TO PRO-
+!                                      VIDE ESTIMATED GRAD-
+!                                      IENTS (FROM GRADL).
+!                                      N .GE. 7 IN THIS
+!                                      CASE.
+!                            IFLAG = 1 IF GRADIENTS ARE PRO-
+!                                      VIDED IN GRAD.  THIS
+!                                      IS MORE EFFICIENT IF
+!                                      INTRC1 IS TO BE
+!                                      CALLED SEVERAL TIMES.
+!
+!                     GRAD - ARRAY DIMENSIONED 3 BY N WHOSE
+!                            I-TH COLUMN CONTAINS AN ESTI-
+!                            MATED GRADIENT AT NODE I IF
+!                            IFLAG = 1 (SEE SUBROUTINE
+!                            GRADL).  GRAD MAY BE A DUMMY
+!                            VARIABLE (NOT USED) IF IFLAG
+!                            = 0.
+!
+!                      IST - INDEX OF THE STARTING NODE IN
+!                            THE SEARCH FOR A TRIANGLE CON-
+!                            TAINING P.  1 .LE. IST .LE. N.
+!                            THE OUTPUT VALUE OF IST FROM A
+!                            PREVIOUS CALL MAY BE A GOOD
+!                            CHOICE.
+!
+! INPUT PARAMETERS OTHER THAN IST ARE NOT ALTERED BY THIS
+!   ROUTINE.
+!
+! OUTPUT PARAMETERS - IST - INDEX OF ONE OF THE VERTICES OF
+!                           THE TRIANGLE CONTAINING P (OR
+!                           NEAREST P) UNLESS IER = -1 OR
+!                           IER = -2.
+!
+! OUTPUT PARAMETERS -  PW - INTERPOLATED VALUE AT P IF
+!                           IER .GE. 0.
+!
+!                     IER - ERROR INDICATOR
+!                           IER = 0 IF INTERPOLATION WAS
+!                                   PERFORMED SUCCESSFULLY.
+!                           IER = 1 IF EXTRAPOLATION WAS
+!                                   PERFORMED SUCCESSFULLY.
+!                           IER = -1 IF N, IFLAG, OR IST IS
+!                                    OUT OF RANGE.
+!                           IER = -2 IF THE NODES ARE COL-
+!                                    LINEAR.
+!                           IER = -3 IF THE ANGULAR DISTANCE
+!                                    BETWEEN P AND THE NEAR-
+!                                    EST POINT OF THE TRIAN-
+!                                    GULATION IS AT LEAST 90
+!                                    DEGREES.
+!
+! MODULES REFERENCED BY INTRC1 - TRFIND, WVAL, ARCINT,
+!                                ARCLEN,
+!             (AND OPTIONALLY)   GRADL, GETNP, CONSTR,
+!                                APLYR, SETUP, GIVENS,
+!                                ROTATE, APLYRT
+!
+! INTRINSIC FUNCTIONS CALLED BY INTRC1 - COS, SIN, SQRT
+!
+!***********************************************************
+!
+      INTEGER( kind = 4) NN, I1, I2, I3, I, IERR, N1, N2, INDX
+      REAL( kind = 8 )    P(3), P1(3), P2(3), P3(3), W1, W2, W3, G1(3), &
+              G2(3), G3(3), B1, B2, B3, SUMM, DUM(3), S12, &
+              PTN1, PTN2, Q(3), QNORM, WQ, GQ(3), A, PTGQ, &
+              GQN, ARCLEN
+!
+! LOCAL PARAMETERS -
+!
+! NN =       LOCAL COPY OF N
+! I1,I2,I3 = VERTEX INDICES RETURNED BY TRFIND
+! I =        DO-LOOP INDEX
+! IERR =     ERROR FLAG FOR CALLS TO GRADL
+! N1,N2 =    INDICES OF THE ENDPOINTS OF A BOUNDARY ARC WHEN
+!              P IS EXTERIOR (NOT CONTAINED IN A TRIANGLE)
+! INDX =     IADJ INDEX OF N2 AS A NEIGHBOR OF N1 OR VICE-
+!              VERSA
+! P =        CARTESIAN COORDINATES OF P
+! P1,P2,P3 = CARTESIAN COORDINATES OF THE VERTICES I1, I2,
+!              AND I3, OR (P1 AND P2) COORDINATES OF N1 AND
+!              N2 IF P IS EXTERIOR
+! W1,W2,W3 = DATA VALUES ASSOCIATED WITH I1, I2, AND I3, OR
+!              (W1 AND W2) VALUES ASSOCIATED WITH N1 AND
+!              N2 IF P IS EXTERIOR
+! G1,G2,G3 = GRADIENTS AT I1, I2, AND I3, OR (G1 AND G2) AT
+!              N1 AND N2
+! B1,B2,B3 = BARYCENTRIC COORDINATES OF THE CENTRAL PROJEC-
+!              TION OF P ONTO THE UNDERLYING PLANAR TRIANGLE
+!              OR (B1 AND B2) PROJECTION OF Q ONTO THE
+!              UNDERLYING LINE SEGMENT N1-N2 WHEN P IS
+!              EXTERIOR -- UNNORMALIZED COORDINATES ARE
+!              COMPUTED BY TRFIND WHEN P IS IN A TRIANGLE
+! SUMM =     QUANTITY USED TO NORMALIZE THE BARYCENTRIC
+!             COORDINATES
+! DUM =      DUMMY PARAMETER FOR WVAL AND ARCINT
+! S12 =      SCALAR PRODUCT (N1,N2) -- FACTOR OF B1 AND B2
+! PTN1 =     SCALAR PRODUCT (P,N1) -- FACTOR OF B1 AND B2
+! PTN2 =     SCALAR PRODUCT (P,N2) -- FACTOR OF B1 AND B2
+! Q =        CLOSEST BOUNDARY POINT TO P WHEN P IS EXTERIOR
+! QNORM =    FACTOR USED TO NORMALIZE Q
+! WQ,GQ =    INTERPOLATED VALUE AND GRADIENT AT Q
+! A =        ANGULAR SEPARATION BETWEEN P AND Q
+! PTGQ =     SCALAR PRODUCT (P,GQ) -- FACTOR OF THE COMPONENT
+!              OF GQ IN THE DIRECTION Q->P
+! GQN =      NEGATIVE OF THE COMPONENT OF GQ IN THE DIRECTION
+!              Q->P
+!
+      NN = N
+      IF (NN .LT. 3  .OR.  (IFLAG .NE. 1  .AND.  NN .LT. 7) &
+         .OR.  IFLAG .LT. 0  .OR.  IFLAG .GT. 1  .OR. &
+         IST .LT. 1  .OR.  IST .GT. NN) GO TO 16
+!
+! TRANSFORM (PLAT,PLON) TO CARTESIAN COORDINATES
+!
+      P(1) = COS(PLAT)*COS(PLON)
+      P(2) = COS(PLAT)*SIN(PLON)
+      P(3) = SIN(PLAT)
+!
+! LOCATE P WITH RESPECT TO THE TRIANGULATION
+!
+      CALL TRFIND(IST,P,X,Y,Z,IADJ,IEND, B1,B2,B3,I1,I2,I3)
+      IF (I1 .EQ. 0) GO TO 17
+      IST = I1
+      IF (I3 .EQ. 0) GO TO 4
+!
+! P IS CONTAINED IN THE TRIANGLE (I1,I2,I3).  STORE THE DATA
+!   VALUES AND VERTEX COORDINATES IN LOCAL VARIABLES.
+!
+      W1 = W(I1)
+      W2 = W(I2)
+      W3 = W(I3)
+      P1(1) = X(I1)
+      P1(2) = Y(I1)
+      P1(3) = Z(I1)
+      P2(1) = X(I2)
+      P2(2) = Y(I2)
+      P2(3) = Z(I2)
+      P3(1) = X(I3)
+      P3(2) = Y(I3)
+      P3(3) = Z(I3)
+      IF (IFLAG .NE. 1) GO TO 2
+!
+! GRADIENTS ARE USER-PROVIDED
+!
+      DO 1 I = 1,3
+        G1(I) = GRAD(I,I1)
+        G2(I) = GRAD(I,I2)
+    1   G3(I) = GRAD(I,I3)
+      GO TO 3
+!
+! COMPUTE GRADIENT ESTIMATES AT THE VERTICES
+!
+    2 CALL GRADL(NN,I1,X,Y,Z,W,IADJ,IEND, G1,IERR)
+      IF (IERR .LT. 0) GO TO 17
+      CALL GRADL(NN,I2,X,Y,Z,W,IADJ,IEND, G2,IERR)
+      IF (IERR .LT. 0) GO TO 17
+      CALL GRADL(NN,I3,X,Y,Z,W,IADJ,IEND, G3,IERR)
+      IF (IERR .LT. 0) GO TO 17
+!
+! NORMALIZE THE COORDINATES
+!
+    3 SUMM = B1 + B2 + B3
+      B1 = B1/SUMM
+      B2 = B2/SUMM
+      B3 = B3/SUMM
+      CALL WVAL(B1,B2,B3,P1,P2,P3,W1,W2,W3,G1,G2,G3,0, PW, &
+                DUM)
+      IER = 0
+      RETURN
+!
+! P IS EXTERIOR TO THE TRIANGULATION, AND I1 AND I2 ARE
+!   BOUNDARY NODES WHICH ARE VISIBLE FROM P.  EXTRAPOLATE TO
+!   P BY LINEAR (WITH RESPECT TO ARC-LENGTH) INTERPOLATION
+!   OF THE VALUE AND DIRECTIONAL DERIVATIVE (GRADIENT COMP-
+!   ONENT IN THE DIRECTION Q->P) OF THE INTERPOLATORY
+!   SURFACE AT Q WHERE Q IS THE CLOSEST BOUNDARY POINT TO P.
+!
+! DETERMINE Q BY TRAVERSING THE BOUNDARY STARTING FROM I1
+!
+    4 N1 = I1
+      PTN1 = P(1)*X(N1) + P(2)*Y(N1) + P(3)*Z(N1)
+      IF (I1 .NE. I2) GO TO 6
+!
+! ALL BOUNDARY NODES ARE VISIBLE FROM P.  FIND A BOUNDARY
+!   ARC N1->N2 SUCH THAT P LEFT (N2 X N1)->N1
+!
+! COUNTERCLOCKWISE BOUNDARY TRAVERSAL --
+!   SET N2 TO THE FIRST NEIGHBOR OF N1
+!
+    5 INDX = 1
+      IF (N1 .NE. 1) INDX = IEND(N1-1) + 1
+      N2 = IADJ(INDX)
+!
+! COMPUTE INNER PRODUCTS (N1,N2) AND (P,N2), AND COMPUTE
+!   B2 = DET(P,N1,N2 X N1)
+!
+      S12 = X(N1)*X(N2) + Y(N1)*Y(N2) + Z(N1)*Z(N2)
+      PTN2 = P(1)*X(N2) + P(2)*Y(N2) + P(3)*Z(N2)
+      B2 = PTN2 - S12*PTN1
+      IF (B2 .LE. 0.) GO TO 6
+!
+! P RIGHT (N2 X N1)->N1 -- ITERATE
+!
+      N1 = N2
+      I1 = N1
+      PTN1 = PTN2
+      GO TO 5
+!
+! P LEFT (N2 X N1)->N1 WHERE N2 IS THE FIRST NEIGHBOR OF N1
+!   CLOCKWISE BOUNDARY TRAVERSAL --
+!
+    6 N2 = N1
+      PTN2 = PTN1
+!
+! SET N1 TO THE LAST NEIGHBOR OF N2 AND TEST FOR TERMINATION
+!
+      INDX = IEND(N2) - 1
+      N1 = IADJ(INDX)
+      IF (N1 .EQ. I1) GO TO 18
+!
+! COMPUTE INNER PRODUCTS (N1,N2) AND (P,N1)
+!
+      S12 = X(N1)*X(N2) + Y(N1)*Y(N2) + Z(N1)*Z(N2)
+      PTN1 = P(1)*X(N1) + P(2)*Y(N1) + P(3)*Z(N1)
+!
+! COMPUTE B2 = DET(P,N1,N2 X N1) = DET(Q,N1,N2 X N1)*(P,Q)
+!
+      B2 = PTN2 - S12*PTN1
+      IF (B2 .LE. 0.) GO TO 6
+!
+! COMPUTE B1 = DET(P,N2 X N1,N2) = DET(Q,N2 X N1,N2)*(P,Q)
+!
+      B1 = PTN1 - S12*PTN2
+      IF (B1 .GT. 0.) GO TO 10
+!
+! Q = N2.  STORE VALUE, COORDINATES, AND AND GRADIENT AT Q.
+!
+      WQ = W(N2)
+      Q(1) = X(N2)
+      Q(2) = Y(N2)
+      Q(3) = Z(N2)
+      IF (IFLAG .NE. 1) GO TO 8
+      DO 7 I = 1,3
+    7   GQ(I) = GRAD(I,N2)
+      GO TO 9
+    8 CALL GRADL(NN,N2,X,Y,Z,W,IADJ,IEND, GQ,IERR)
+      IF (IERR .LT. 0) GO TO 17
+!
+! EXTRAPOLATE TO P -- PW = WQ + A*(GQ,Q X (PXQ)/SIN(A))
+!   WHERE A IS THE ANGULAR SEPARATION BETWEEN Q AND P,
+!   AND SIN(A) IS THE MAGNITUDE OF P X Q.
+!
+    9 A = ARCLEN(Q,P)
+      PTGQ = P(1)*GQ(1) + P(2)*GQ(2) + P(3)*GQ(3)
+      PW = WQ
+      IF (A .NE. 0.) PW = PW + PTGQ*A/SIN(A)
+      IER = 1
+      RETURN
+!
+! P STRICTLY LEFT (N2 X N1)->N2 AND P STRICTLY LEFT
+!   N1->(N2 X N1).  THUS Q LIES ON THE INTERIOR OF N1->N2.
+!   STORE DATA VALUES AND COORDINATES OF N1 AND N2 IN
+!   LOCAL VARIABLES
+!
+   10 W1 = W(N1)
+      W2 = W(N2)
+      P1(1) = X(N1)
+      P1(2) = Y(N1)
+      P1(3) = Z(N1)
+      P2(1) = X(N2)
+      P2(2) = Y(N2)
+      P2(3) = Z(N2)
+!
+! COMPUTE THE CENTRAL PROJECTION OF Q ONTO P2-P1 AND
+!   NORMALIZE TO OBTAIN Q
+!
+      QNORM = 0.
+      DO 11 I = 1,3
+        Q(I) = B1*P1(I) + B2*P2(I)
+   11   QNORM = QNORM + Q(I)*Q(I)
+      QNORM = SQRT(QNORM)
+      DO 12 I = 1,3
+   12   Q(I) = Q(I)/QNORM
+!
+! STORE OR COMPUTE GRADIENTS AT N1 AND N2
+!
+      IF (IFLAG .NE. 1) GO TO 14
+      DO 13 I = 1,3
+        G1(I) = GRAD(I,N1)
+   13   G2(I) = GRAD(I,N2)
+      GO TO 15
+   14 CALL GRADL(NN,N1,X,Y,Z,W,IADJ,IEND, G1,IERR)
+      IF (IERR .LT. 0) GO TO 17
+      CALL GRADL(NN,N2,X,Y,Z,W,IADJ,IEND, G2,IERR)
+      IF (IERR .LT. 0) GO TO 17
+!
+! COMPUTE AN INTERPOLATED VALUE AND NORMAL GRADIENT-
+!   COMPONENT AT Q
+!
+   15 CALL ARCINT(Q,P1,P2,W1,W2,G1,G2, WQ,DUM,GQN)
+!
+! EXTRAPOLATE TO P -- THE NORMAL GRADIENT COMPONENT GQN IS
+!   THE NEGATIVE OF THE COMPONENT IN THE DIRECTION Q->P.
+!
+      PW = WQ - GQN*ARCLEN(Q,P)
+      IER = 1
+      RETURN
+!
+! N, IFLAG, OR IST OUT OF RANGE
+!
+   16 IER = -1
+      RETURN
+!
+! COLLINEAR NODES
+!
+   17 IER = -2
+      RETURN
+!
+! THE DISTANCE BETWEEN P AND THE CLOSEST BOUNDARY POINT
+!   IS AT LEAST 90 DEGREES
+!
+   18 IER = -3
+      RETURN
+      END
+      SUBROUTINE SHIFTD (NFRST,NLAST,KK, IARR )
+      INTEGER( kind = 4) NFRST, NLAST, KK, IARR(1)
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   THIS ROUTINE SHIFTS A SET OF CONTIGUOUS ELEMENTS OF AN
+! INTEGER ARRAY KK POSITIONS DOWNWARD (UPWARD IF KK .LT. 0).
+! THE LOOPS ARE UNROLLED IN ORDER TO INCREASE EFFICIENCY.
+!
+! INPUT PARAMETERS - NFRST,NLAST - BOUNDS ON THE PORTION OF
+!                                  IARR TO BE SHIFTED.  ALL
+!                                  ELEMENTS BETWEEN AND
+!                                  INCLUDING THE BOUNDS ARE
+!                                  SHIFTED UNLESS NFRST .GT.
+!                                  NLAST, IN WHICH CASE NO
+!                                  SHIFT OCCURS.
+!
+!                             KK - NUMBER OF POSITIONS EACH
+!                                  ELEMENT IS TO BE SHIFTED.
+!                                  IF KK .LT. 0 SHIFT UP.
+!                                  IF KK .GT. 0 SHIFT DOWN.
+!
+!                           IARR - INTEGER ARRAY OF LENGTH
+!                                  .GE. NLAST + MAX(KK,0).
+!
+! NFRST, NLAST, AND KK ARE NOT ALTERED BY THIS ROUTINE.
+!
+! OUTPUT PARAMETER -        IARR - SHIFTED ARRAY.
+!
+! MODULES REFERENCED BY SHIFTD - NONE
+!
+!***********************************************************
+!
+      INTEGER( kind = 4) INC, K, NF, NL, NLP1, NS, NSL, I, IBAK, INDX, &
+              IMAX
+      DATA    INC/5/
+!
+! LOCAL PARAMETERS -
+!
+! INC =  DO-LOOP INCREMENT (UNROLLING FACTOR) -- IF INC IS
+!          CHANGED, STATEMENTS MUST BE ADDED TO OR DELETED
+!          FROM THE DO-LOOPS
+! K =    LOCAL COPY OF KK
+! NF =   LOCAL COPY OF NFRST
+! NL =   LOCAL COPY OF NLAST
+! NLP1 = NL + 1
+! NS =   NUMBER OF SHIFTS
+! NSL =  NUMBER OF SHIFTS DONE IN UNROLLED DO-LOOP (MULTIPLE
+!          OF INC)
+! I =    DO-LOOP INDEX AND INDEX FOR IARR
+! IBAK = INDEX FOR DOWNWARD SHIFT OF IARR
+! INDX = INDEX FOR IARR
+! IMAX = BOUND ON DO-LOOP INDEX
+!
+      K = KK
+      NF = NFRST
+      NL = NLAST
+      IF (NF .GT. NL  .OR.  K .EQ. 0) RETURN
+      NLP1 = NL + 1
+      NS = NLP1 - NF
+      NSL = INC*(NS/INC)
+      IF ( K .LT. 0) GO TO 4
+!
+! SHIFT DOWNWARD STARTING FROM THE BOTTOM
+!
+      IF (NSL .LE. 0) GO TO 2
+      DO 1 I = 1,NSL,INC
+        IBAK = NLP1 - I
+        INDX = IBAK + K
+        IARR(INDX) = IARR(IBAK)
+        IARR(INDX-1) = IARR(IBAK-1)
+        IARR(INDX-2) = IARR(IBAK-2)
+        IARR(INDX-3) = IARR(IBAK-3)
+        IARR(INDX-4) = IARR(IBAK-4)
+    1   CONTINUE
+!
+! PERFORM THE REMAINING NS-NSL SHIFTS ONE AT A TIME
+!
+    2 IBAK = NLP1 - NSL
+    3 IF (IBAK .LE. NF) RETURN
+      IBAK = IBAK - 1
+      INDX = IBAK + K
+      IARR(INDX) = IARR(IBAK)
+      GO TO 3
+!
+! SHIFT UPWARD STARTING FROM THE TOP
+!
+    4 IF (NSL .LE. 0) GO TO 6
+      IMAX = NLP1 - INC
+      DO 5 I = NF,IMAX,INC
+        INDX = I + K
+        IARR(INDX) = IARR(I)
+        IARR(INDX+1) = IARR(I+1)
+        IARR(INDX+2) = IARR(I+2)
+        IARR(INDX+3) = IARR(I+3)
+        IARR(INDX+4) = IARR(I+4)
+    5   CONTINUE
+!
+! PERFORM THE REMAINING NS-NSL SHIFTS ONE AT A TIME
+!
+    6 I = NSL + NF
+    7 IF (I .GT. NL) RETURN
+      INDX = I + K
+      IARR(INDX) = IARR(I)
+      I = I + 1
+      GO TO 7
+      END
+      SUBROUTINE GRADL (N,K,X,Y,Z,W,IADJ,IEND, G,IER)
+      INTEGER( kind = 4) N, K, IADJ(1), IEND(N), IER
+      REAL( kind = 8 )    X(N), Y(N), Z(N), W(N), G(3)
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   GIVEN A TRIANGULATION OF A SET OF NODES ON THE UNIT
+! SPHERE WITH THEIR ASSOCIATED DATA VALUES W, THIS ROUTINE
+! ESTIMATES A GRADIENT VECTOR AT NODE K AS FOLLOWS -- THE
+! COORDINATE SYSTEM IS ROTATED SO THAT K BECOMES THE NORTH
+! POLE, NODE K AND A SET OF NEARBY NODES ARE PROJECTED
+! ORTHOGONALLY ONTO THE X-Y PLANE (IN THE NEW COORDINATE
+! SYSTEM), A QUADRATIC IS FITTED IN A WEIGHTED LEAST-SQUARES
+! SENSE TO THE DATA VALUES AT THE PROJECTED NODES SUCH THAT
+! THE VALUE (ASSOCIATED WITH K) AT (0,0) IS INTERPOLATED, X-
+! AND Y-PARTIAL DERIVATIVE ESTIMATES DX AND DY ARE COMPUTED
+! BY DIFFERENTIATING THE QUADRATIC AT (0,0), AND THE ESTI-
+! MATED GRADIENT G IS OBTAINED BY ROTATING (DX,DY,0) BACK TO
+! THE ORIGINAL COORDINATE SYSTEM.  NOTE THAT G LIES IN THE
+! PLANE TANGENT TO THE SPHERE AT NODE K, I.E. G IS ORTHOGO-
+! NAL TO THE UNIT VECTOR REPRESENTED BY NODE K.  A MARQUARDT
+! STABILIZATION FACTOR IS USED IF NECESSARY TO ENSURE A
+! WELL-CONDITIONED LEAST SQUARES SYSTEM, AND A UNIQUE SOLU-
+! TION EXISTS UNLESS THE NODES ARE COLLINEAR.
+!
+! INPUT PARAMETERS -    N - NUMBER OF NODES IN THE TRIANGU-
+!                           LATION.  N .GE. 7.
+!
+!                       K - NODE AT WHICH THE GRADIENT IS
+!                           SOUGHT.  1 .LE. K .LE. N.
+!
+!                   X,Y,Z - CARTESIAN COORDINATES OF THE
+!                           NODES.
+!
+!                       W - DATA VALUES AT THE NODES.  W(I)
+!                           IS ASSOCIATED WITH (X(I),Y(I),
+!                           Z(I)) FOR I = 1,...,N.
+!
+!                    IADJ - SET OF ADJACENCY LISTS OF NODES
+!                           IN THE TRIANGULATION.
+!
+!                    IEND - POINTERS TO THE ENDS OF
+!                           ADJACENCY LISTS FOR EACH NODE.
+!
+! IADJ AND IEND MAY BE CREATED BY SUBROUTINE TRMESH.
+!
+! INPUT PARAMETERS ARE NOT ALTERED BY THIS ROUTINE.
+!
+! OUTPUT PARAMETERS -    G - X-, Y-, AND Z-COMPONENTS (IN
+!                            THAT ORDER) OF THE ESTIMATED
+!                            GRADIENT AT NODE K UNLESS
+!                            IER .LT. 0.
+!
+!                      IER - ERROR INDICATOR
+!                            IER .GE. 6 IF NO ERRORS WERE
+!                                       ENCOUNTERED.  IER
+!                                       CONTAINS THE NUMBER
+!                                       OF NODES (INCLUDING
+!                                       K) USED IN THE LEAST
+!                                       SQUARES FIT.
+!                            IER = -1 IF N OR K IS OUT OF
+!                                     RANGE.
+!                            IER = -2 IF THE LEAST SQUARES
+!                                     SYSTEM HAS NO UNIQUE
+!                                     SOLUTION DUE TO DUP-
+!                                     LICATE OR COLLINEAR
+!                                     NODES.
+!
+! MODULES REFERENCED BY GRADL - GETNP, CONSTR, APLYR,
+!                               SETUP, GIVENS, ROTATE,
+!                               APLYRT
+!
+! INTRINSIC FUNCTIONS CALLED BY GRADL - MIN0, FLOAT, SQRT,
+!                                       AMIN1, ABS
+!
+!***********************************************************
+!
+      INTEGER( kind = 4) NN, KK, LMN, LMX, LMIN, LMAX, LM1, LNP, &
+              NPTS(30), IERR, NP, I, J, IM1, IP1, JP1, L
+      REAL( kind = 8 )    WK, SUM, DF, RF, RTOL, AVSQ, AV, RIN, CX, SX, &
+              CY, SY, XP, YP, ZP, WT, A(6,6), C, S, DMIN, &
+              DTOL, SF, DX, DY
+      DATA    LMN/10/
+      DATA    LMX/30/, RTOL/1.E-6/, DTOL/.01/, SF/1./
+!
+! LOCAL PARAMETERS -
+!
+! NN,KK =     LOCAL COPIES OF N AND K
+! LMN,LMX =   MINIMUM AND MAXIMUM VALUES OF LNP FOR N
+!               SUFFICIENTLY LARGE.  IN MOST CASES LMN-1
+!               NODES ARE USED IN THE FIT.  7 .LE. LMN .LE.
+!               LMX.
+! LMIN,LMAX = MIN(LMN,N), MIN(LMX,N)
+! LM1 =       LMIN-1
+! LNP =       LENGTH OF NPTS OR LMAX+1
+! NPTS =      ARRAY CONTAINING THE INDICES OF A SEQUENCE OF
+!               NODES ORDERED BY ANGULAR DISTANCE FROM K.
+!               NPTS(1)=K AND THE FIRST LNP-1 ELEMENTS OF
+!               NPTS ARE USED IN THE LEAST SQUARES FIT.
+!               UNLESS LNP = LMAX+1, NPTS(LNP) DETERMINES R
+!               (SEE RIN).
+! IERR =      ERROR FLAG FOR CALLS TO GETNP (NOT CHECKED)
+! NP =        ELEMENT OF NPTS TO BE ADDED TO THE SYSTEM
+! I,J =       LOOP INDICES
+! IM1,IP1 =   I-1, I+1
+! JP1 =       J+1
+! L =         NUMBER OF COLUMNS OF A**T TO WHICH A ROTATION
+!               IS APPLIED
+! WK =        W(K) -- DATA VALUE AT NODE K
+! SUM =       SUM OF SQUARED EUCLIDEAN DISTANCES (IN THE
+!               ROTATED COORDINATE SYSTEM) BETWEEN THE
+!               ORIGIN AND THE NODES USED IN THE LEAST
+!               SQUARES FIT
+! DF =        NEGATIVE Z-COMPONENT (IN THE ROTATED COORDI-
+!               NATE SYSTEM) OF AN ELEMENT NP OF NPTS --
+!               INCREASING FUNCTION OF THE ANGULAR DISTANCE
+!               BETWEEN K AND NP.  DF LIES IN THE INTERVAL
+!               (-1,1).
+! RF =        VALUE OF DF ASSOCIATED WITH NPTS(LNP) UNLESS
+!               LNP = LMAX+1 (SEE RIN)
+! RTOL =      TOLERANCE FOR DETERMINING LNP (AND HENCE R) --
+!               IF THE INCREASE IN DF BETWEEN TWO SUCCESSIVE
+!               ELEMENTS OF NPTS IS LESS THAN RTOL, THEY ARE
+!               TREATED AS BEING THE SAME DISTANCE FROM NODE
+!               K AND AN ADDITIONAL NODE IS ADDED
+! AVSQ =      AV*AV -- ACCUMULATED IN SUM
+! AV =        ROOT-MEAN-SQUARE DISTANCE (IN THE ROTATED
+!               COORDINATE SYSTEM) BETWEEN THE ORIGIN AND
+!               THE NODES (OTHER THAN K) IN THE LEAST
+!               SQUARES FIT.  THE FIRST 3 COLUMNS OF A**T
+!               ARE SCALED BY 1/AVSQ, THE NEXT 2 BY 1/AV.
+! RIN =       INVERSE OF A RADIUS OF INFLUENCE R WHICH
+!               ENTERS INTO WT -- R = 1+RF UNLESS ALL ELE-
+!               MENTS OF NPTS ARE USED IN THE FIT (LNP =
+!               LMAX+1), IN WHICH CASE R IS THE DISTANCE
+!               FUNCTION ASSOCIATED WITH SOME POINT MORE
+!               DISTANT FROM K THAN NPTS(LMAX)
+! CX,SX =     COMPONENTS OF A PLANE ROTATION ABOUT THE X-
+!               AXIS WHICH, TOGETHER WITH CY AND SY, DEFINE
+!               A MAPPING FROM NODE K TO THE NORTH POLE
+!               (0,0,1)
+! CY,SY =     COMPONENTS OF A PLANE ROTATION ABOUT THE Y-
+!               AXIS
+! XP,YP,ZP =  COORDINATES OF NP IN THE ROTATED COORDINATE
+!               SYSTEM UNLESS ZP .LT. 0, IN WHICH CASE
+!               (XP,YP,0) LIES ON THE EQUATOR
+! WT =        WEIGHT FOR THE EQUATION CORRESPONDING TO NP --
+!               WT = (R-D)/(R*D) = 1/D - RIN WHERE D = 1-ZP
+!               IS ASSOCIATED WITH NP
+! A =         TRANSPOSE OF THE (UPPER TRIANGLE OF THE) AUG-
+!               MENTED REGRESSION MATRIX
+! C,S =       COMPONENTS OF THE PLANE ROTATION USED TO
+!               TRIANGULARIZE THE REGRESSION MATRIX
+! DMIN =      MINIMUM OF THE MAGNITUDES OF THE DIAGONAL
+!               ELEMENTS OF THE TRIANGULARIZED REGRESSION
+!               MATRIX
+! DTOL =      TOLERANCE FOR DETECTING AN ILL-CONDITIONED
+!               SYSTEM -- DMIN IS REQUIRED TO BE AT LEAST
+!               DTOL
+! SF =        MARQUARDT STABILIZATION FACTOR USED TO DAMP
+!               OUT THE FIRST 3 SOLUTION COMPONENTS (SECOND
+!               PARTIALS OF THE QUADRATIC) WHEN THE SYSTEM
+!               IS ILL-CONDITIONED.  INCREASING SF RESULTS
+!               IN MORE DAMPING (A MORE NEARLY LINEAR FIT).
+! DX,DY =     X AND Y COMPONENTS OF THE ESTIMATED GRADIENT
+!               IN THE ROTATED COORDINATE SYSTEM
+!
+      NN = N
+      KK = K
+      WK = W(KK)
+!
+! CHECK FOR ERRORS AND INITIALIZE LMIN, LMAX
+!
+      IF (NN .LT. 7  .OR.  KK .LT. 1  .OR.  KK .GT. NN) &
+         GO TO 13
+      LMIN = MIN0(LMN,NN)
+      LMAX = MIN0(LMX,NN)
+!
+! COMPUTE NPTS, LNP, AVSQ, AV, AND R.
+!   SET NPTS TO THE CLOSEST LMIN-1 NODES TO K.  DF CONTAINS
+!   THE NEGATIVE Z-COMPONENT (IN THE ROTATED COORDINATE
+!   SYSTEM) OF THE NEW NODE ON RETURN FROM GETNP.
+!
+      SUM = 0.
+      NPTS(1) = KK
+      LM1 = LMIN - 1
+      DO 1 LNP = 2,LM1
+        CALL GETNP (X,Y,Z,IADJ,IEND,LNP, NPTS, DF,IERR)
+    1   SUM = SUM + 1. - DF*DF
+!
+!   ADD ADDITIONAL NODES TO NPTS UNTIL THE INCREASE IN
+!     R = 1+RF IS AT LEAST RTOL.
+!
+      DO 2 LNP = LMIN,LMAX
+        CALL GETNP (X,Y,Z,IADJ,IEND,LNP, NPTS, RF,IERR)
+        IF (RF-DF .GE. RTOL) GO TO 3
+    2   SUM = SUM + 1. - RF*RF
+!
+!   USE ALL LMAX NODES IN THE LEAST SQUARES FIT.  R IS
+!     ARBITRARILY INCREASED BY 5 PER CENT.
+!
+      RF = 1.05*RF + .05
+      LNP = LMAX + 1
+!
+!   THERE ARE LNP-2 EQUATIONS CORRESPONDING TO NODES
+!     NPTS(2),...,NPTS(LNP-1).
+!
+    3 AVSQ = SUM/FLOAT(LNP-2)
+      AV = SQRT(AVSQ)
+      RIN = 1./(1.+RF)
+!
+! CONSTRUCT THE ROTATION
+!
+      CALL CONSTR (X(KK),Y(KK),Z(KK), CX,SX,CY,SY)
+!
+! SET UP THE FIRST 5 EQUATIONS OF THE AUGMENTED REGRESSION
+!   MATRIX (TRANSPOSED) AS THE COLUMNS OF A, AND ZERO OUT
+!   THE LOWER TRIANGLE (UPPER TRIANGLE OF A) WITH GIVENS
+!   ROTATIONS
+!
+      DO 5 I = 1,5
+        NP = NPTS(I+1)
+        CALL APLYR (X(NP),Y(NP),Z(NP),CX,SX,CY,SY, XP,YP,ZP)
+        WT = 1./(1.-ZP) - RIN
+        CALL SETUP (XP,YP,W(NP),WK,AV,AVSQ,WT, A(1,I))
+        IF (I .EQ. 1) GO TO 5
+        IM1 = I - 1
+        DO 4 J = 1,IM1
+          JP1 = J + 1
+          L = 6 - J
+          CALL GIVENS ( A(J,J),A(J,I), C,S)
+    4     CALL ROTATE (L,C,S, A(JP1,J),A(JP1,I) )
+    5   CONTINUE
+!
+! ADD THE ADDITIONAL EQUATIONS TO THE SYSTEM USING
+!   THE LAST COLUMN OF A -- I .LE. LNP.
+!
+      I = 7
+    6   IF (I .EQ. LNP) GO TO 8
+        NP = NPTS(I)
+        CALL APLYR (X(NP),Y(NP),Z(NP),CX,SX,CY,SY, XP,YP,ZP)
+        WT = 1./(1.-ZP) - RIN
+        CALL SETUP (XP,YP,W(NP),WK,AV,AVSQ,WT, A(1,6))
+        DO 7 J = 1,5
+          JP1 = J + 1
+          L = 6 - J
+          CALL GIVENS ( A(J,J),A(J,6), C,S)
+    7     CALL ROTATE (L,C,S, A(JP1,J),A(JP1,6) )
+        I = I + 1
+        GO TO 6
+!
+! TEST THE SYSTEM FOR ILL-CONDITIONING
+!
+    8 DMIN = AMIN1( ABS(A(1,1)),ABS(A(2,2)),ABS(A(3,3)), &
+                    ABS(A(4,4)),ABS(A(5,5)) )
+      IF (DMIN .GE. DTOL) GO TO 12
+      IF (LNP .GT. LMAX) GO TO 9
+!
+! ADD ANOTHER NODE TO THE SYSTEM AND INCREASE R --
+!   I .EQ. LNP
+!
+      LNP = LNP + 1
+      IF (LNP .LE. LMAX) CALL GETNP (X,Y,Z,IADJ,IEND,LNP, &
+                                     NPTS, RF,IERR)
+      RIN = 1./(1.05*(1.+RF))
+      GO TO 6
+!
+! STABILIZE THE SYSTEM BY DAMPING SECOND PARTIALS --ADD
+!   MULTIPLES OF THE FIRST THREE UNIT VECTORS TO THE FIRST
+!   THREE EQUATIONS.
+!
+    9 DO 11 I = 1,3
+        A(I,6) = SF
+        IP1 = I + 1
+        DO 10 J = IP1,6
+   10     A(J,6) = 0.
+        DO 11 J = I,5
+          JP1 = J + 1
+          L = 6 - J
+          CALL GIVENS ( A(J,J),A(J,6), C,S)
+   11     CALL ROTATE (L,C,S, A(JP1,J),A(JP1,6) )
+!
+! TEST THE LINEAR PORTION OF THE STABILIZED SYSTEM FOR
+!   ILL-CONDITIONING
+!
+      DMIN = AMIN1( ABS(A(4,4)),ABS(A(5,5)) )
+      IF (DMIN .LT. DTOL) GO TO 14
+!
+! SOLVE THE 2 BY 2 TRIANGULAR SYSTEM FOR THE ESTIMATED
+!   PARTIAL DERIVATIVES
+!
+   12 DY = A(6,5)/A(5,5)
+      DX = (A(6,4) - A(5,4)*DY)/A(4,4)/AV
+      DY = DY/AV
+!
+! ROTATE THE GRADIENT (DX,DY,0) BACK INTO THE ORIGINAL
+!   COORDINATE SYSTEM
+!
+      CALL APLYRT (DX,DY,CX,SX,CY,SY, G)
+      IER = LNP - 1
+      RETURN
+!
+! N OR K IS OUT OF RANGE
+!
+   13 IER = -1
+      RETURN
+!
+! NO UNIQUE SOLUTION DUE TO COLLINEAR NODES
+!
+   14 IER = -2
+      RETURN
+      END
+      SUBROUTINE WVAL (B1,B2,B3,V1,V2,V3,W1,W2,W3,G1,G2,G3, &
+                       IFLAG, PW,PG)
+      INTEGER( kind = 4) IFLAG
+      REAL( kind = 8 )    B1, B2, B3, V1(3), V2(3), V3(3), W1, W2, W3, &
+              G1(3), G2(3), G3(3), PW, PG(3)
+!
+!***********************************************************
+!
+!                                               ROBERT RENKA
+!                                       OAK RIDGE NATL. LAB.
+!                                             (615) 576-5139
+!
+!   GIVEN DATA VALUES AND GRADIENTS AT THE THREE VERTICES OF
+! A SPHERICAL TRIANGLE CONTAINING A POINT P, THIS ROUTINE
+! COMPUTES THE VALUE AND, OPTIONALLY, THE GRADIENT OF F AT P
+! WHERE F INTERPOLATES THE VERTEX DATA.  ALONG THE TRIANGLE
+! EDGES, THE INTERPOLATORY FUNCTION F IS THE HERMITE CUBIC
+! (WITH RESPECT TO ARC-LENGTH) INTERPOLANT OF THE VALUES AND
+! TANGENTIAL GRADIENT COMPONENTS AT THE ENDPOINTS, AND THE
+! DERIVATIVE NORMAL TO THE ARC VARIES LINEARLY WITH RESPECT
+! TO ARC-LENGTH BETWEEN THE NORMAL GRADIENT COMPONENTS AT
+! THE ENDPOINTS.  THUS THE METHOD YIELDS C-1 CONTINUITY WHEN
+! USED TO INTERPOLATE OVER A TRIANGULATION.  THE INTERPOLANT
+! USES A FIRST-ORDER BLENDING METHOD ON THE UNDERLYING
+! PLANAR TRIANGLE.
+!
+! INPUT PARAMETERS - B1,B2,B3 - BARYCENTRIC COORDINATES OF
+!                               PP WITH RESPECT TO THE
+!                               (PLANAR) UNDERLYING TRIANGLE
+!                               (V1,V2,V3) WHERE PP IS THE
+!                               CENTRAL PROJECTION OF P ONTO
+!                               THIS TRIANGLE.
+!
+!                    V1,V2,V3 - CARTESIAN COORDINATES OF THE
+!                               VERTICES OF A SPHERICAL TRI-
+!                               ANGLE CONTAINING P.  V3 LEFT
+!                               V1->V2.
+!
+!                    W1,W2,W3 - DATA VALUES ASSOCIATED WITH
+!                               THE VERTICES.
+!
+!                    G1,G2,G3 - GRADIENTS ASSOCIATED WITH
+!                               THE VERTICES.  GI IS ORTHOG-
+!                               ONAL TO VI FOR I = 1,2,3.
+!
+!                       IFLAG - OPTION INDICATOR
+!                               IFLAG = 0 IF ONLY PW IS TO
+!                                         BE COMPUTED.
+!                               IFLAG = 1 IF BOTH PW AND PG
+!                                         ARE DESIRED.
+!
+!                          PG - VECTOR OF LENGTH 3 IF IFLAG
+!                               = 1, NOT USED OTHERWISE.
+!
+! INPUT PARAMETERS ARE NOT ALTERED BY THIS ROUTINE.
+!
+! OUTPUT PARAMETERS -      PW - INTERPOLATED VALUE AT P.
+!
+!                          PG - INTERPOLATED GRADIENT AT P
+!                               (ORTHOGONAL TO P) IF IFLAG
+!                               = 1.
+!
+! EACH VECTOR V ABOVE CONTAINS X-, Y-, AND Z-COMPONENTS IN
+!   V(1), V(2), AND V(3), RESPECTIVELY.
+!
+! MODULES REFERENCED BY WVAL - ARCINT, ARCLEN
+!
+! INTRINSIC FUNCTION CALLED BY WVAL - SQRT
+!
+!***********************************************************
+!
+      INTEGER( kind = 4) I
+      REAL( kind = 8 )    C1,C2,C3, SUMM, U1(3), U2(3), U3(3), U1N, &
+              U2N, U3N, Q1(3), Q2(3), Q3(3), VAL, W, G(3),&
+              DUM
+!
+! LOCAL PARAMETERS -
+!
+! I =           DO-LOOP INDEX
+! C1,C2,C3 =    COEFFICIENTS (WEIGHT FUNCTIONS) OF PARTIAL
+!                 INTERPOLANTS.  C1 = 1 ON THE EDGE OPPOSITE
+!                 V1 AND C1 = 0 ON THE OTHER EDGES.  SIMI-
+!                 LARLY FOR C2 AND C3.  C1+C2+C3 = 1.
+! SUMM =         QUANTITY USED TO NORMALIZE C1, C2, AND C3
+! U1,U2,U3 =    POINTS ON THE BOUNDARY OF THE PLANAR TRIAN-
+!                 GLE AND LYING ON THE LINES CONTAINING PP
+!                 AND THE VERTICES.  U1 IS OPPOSITE V1, ETC.
+! U1N,U2N,U3N = QUANTITIES USED TO COMPUTE Q1, Q2, AND Q3
+!                 (MAGNITUDES OF U1, U2, AND U3)
+! Q1,Q2,Q3 =    CENTRAL PROJECTIONS OF U1, U2, AND U3 ONTO
+!                 THE SPHERE AND THUS LYING ON AN ARC OF THE
+!                 SPHERICAL TRIANGLE
+! VAL =         LOCAL VARIABLE USED TO ACCUMULATE THE CON-
+!                 TRIBUTIONS TO PW
+! W,G =         VALUE AND GRADIENT AT Q1, Q2, OR Q3 OBTAINED
+!                 BY INTERPOLATION ALONG ONE OF THE ARCS OF
+!                 THE SPHERICAL TRIANGLE
+! DUM =         DUMMY VARIABLE FOR THE CALL TO ARCINT
+!
+!
+! COMPUTE WEIGHT FUNCTIONS C1, C2, AND C3
+!
+      C1 = B2*B3
+      C2 = B3*B1
+      C3 = B1*B2
+      SUMM = C1 + C2 + C3
+      IF (SUMM .GT. 0.) GO TO 2
+!
+! P COINCIDES WITH A VERTEX
+!
+      PW = B1*W1 + B2*W2 + B3*W3
+      IF (IFLAG .NE. 1) RETURN
+      DO 1 I = 1,3
+    1   PG(I) = B1*G1(I) + B2*G2(I) + B3*G3(I)
+      RETURN
+!
+! NORMALIZE C1, C2, AND C3
+!
+    2 C1 = C1/SUMM
+      C2 = C2/SUMM
+      C3 = C3/SUMM
+!
+! COMPUTE (U1,U2,U3) AND (U1N,U2N,U3N)
+!
+      U1N = 0.
+      U2N = 0.
+      U3N = 0.
+      DO 3 I = 1,3
+        U1(I) = (B2*V2(I) + B3*V3(I))/(B2+B3)
+        U2(I) = (B3*V3(I) + B1*V1(I))/(B3+B1)
+        U3(I) = (B1*V1(I) + B2*V2(I))/(B1+B2)
+        U1N = U1N + U1(I)*U1(I)
+        U2N = U2N + U2(I)*U2(I)
+    3   U3N = U3N + U3(I)*U3(I)
+!
+! COMPUTE Q1, Q2, AND Q3
+!
+      U1N = SQRT(U1N)
+      U2N = SQRT(U2N)
+      U3N = SQRT(U3N)
+      DO 4 I = 1,3
+        Q1(I) = U1(I)/U1N
+        Q2(I) = U2(I)/U2N
+    4   Q3(I) = U3(I)/U3N
+!
+! COMPUTE INTERPOLATED VALUE (VAL) AT P BY LOOPING ON
+!   TRIANGLE SIDES
+!
+      VAL = 0.
+!
+! CONTRIBUTION FROM SIDE OPPOSITE V1 --
+!
+!   COMPUTE VALUE AND GRADIENT AT Q1 BY INTERPOLATING
+!     BETWEEN V2 AND V3
+!
+      CALL ARCINT (Q1,V2,V3,W2,W3,G2,G3, W,G,DUM)
+!
+!   ADD IN THE CONTRIBUTION
+!
+      VAL = VAL + C1*( W + B1*B1*(3.-2.*B1)*(W1-W) + &
+                  B1*(1.-B1)* &
+                  (B1*(G1(1)*U1(1)+G1(2)*U1(2)+G1(3)*U1(3)) &
+                   + (1.-B1)* &
+                   (G(1)*V1(1)+G(2)*V1(2)+G(3)*V1(3))/U1N) )
+!
+! CONTRIBUTION FROM SIDE OPPOSITE V2 --
+!
+!   COMPUTE VALUE AND GRADIENT AT Q2 BY INTERPOLATING
+!     BETWEEN V3 AND V1
+!
+      CALL ARCINT (Q2,V3,V1,W3,W1,G3,G1, W,G,DUM)
+!
+!   ADD IN THE CONTRIBUTION
+!
+      VAL = VAL + C2*( W + B2*B2*(3.-2.*B2)*(W2-W) + &
+                  B2*(1.-B2)* &
+                  (B2*(G2(1)*U2(1)+G2(2)*U2(2)+G2(3)*U2(3)) &
+                   + (1.-B2)* &
+                   (G(1)*V2(1)+G(2)*V2(2)+G(3)*V2(3))/U2N) )
+!
+! CONTRIBUTION FROM SIDE OPPOSITE V3 --
+!
+!   COMPUTE INTERPOLATED VALUE AND GRADIENT AT Q3
+!     BY INTERPOLATING BETWEEN V1 AND V2
+!
+      CALL ARCINT (Q3,V1,V2,W1,W2,G1,G2, W,G,DUM)
+!
+!   ADD IN THE FINAL CONTRIBUTION
+!
+      VAL = VAL + C3*( W + B3*B3*(3.-2.*B3)*(W3-W) + &
+                  B3*(1.-B3)* &
+                  (B3*(G3(1)*U3(1)+G3(2)*U3(2)+G3(3)*U3(3)) &
+                   + (1.-B3)* &
+                   (G(1)*V3(1)+G(2)*V3(2)+G(3)*V3(3))/U3N) )
+      PW = VAL
+      IF (IFLAG .NE. 1) RETURN
+      RETURN
+      END
 
       subroutine interp_n(npts,nptso,order,olats,olons,x,y,z,datain,lst,&
                            lptr,lend,odata,ierr)
@@ -5829,20 +7462,15 @@ SUBROUTINE INTERP (N,NNEIGHBOR,PLAT,PLON,X,Y,Z,W,LIST,LPTR,&
       real( kind = 8 ), intent(out), dimension(nptso) :: odata
       integer( kind = 4 ), intent(in), dimension(npts) :: lend
       integer( kind = 4 ), intent(in), dimension(6*(npts-2)) :: lst,lptr
-      logical nn
       integer( kind = 4 ) n,ierr1,ist
       ist = 1
       ierr = 0
-      if (order == 0) then
-         nn = .true.
-      else if (order == 1) then
-         nn = .false.
-      else
-         print *,'fatal error: interp order must be 0 or 1'
+      if (order .ne. 0 .and. order .ne. 1 .and. order .ne. 3) then
+         print *,'fatal error: interp order must be 0, 1 or 3'
          stop
       endif
       do n=1,nptso
-         call interp(npts,nn,olats(n),olons(n),x,y,z,datain,lst,lptr,&
+         call interp(npts,order,olats(n),olons(n),x,y,z,datain,lst,lptr,&
                      lend,ist,odata(n),ierr1)
          if (ierr1 .ne. 0) then
            !print *,n,'warning: ierr = ',ierr1,' in interp_n'
