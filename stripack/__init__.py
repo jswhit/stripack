@@ -74,7 +74,6 @@ Algorithms:
  R. J. Renka, "ALGORITHM 623:  Interpolation on the Surface of a
  Sphere", ACM Trans. Math. Software, Vol. 10, No. 4, December 1984,
  pp. 437-439.
-
 """
         shapeout = olons.shape
         if len(shapeout) not in [1,2]:
