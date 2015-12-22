@@ -6660,9 +6660,9 @@ END SUBROUTINE getnp
 !                            ATED WITH (X(I),Y(I),Z(I)) FOR
 !                            I = 1,...,N.
 !
-!                IADJ,IEND - DATA STRUCTURE REPRESENTING THE
-!                            TRIANGULATION.  SEE SUBROUTINE
-!                            TRMESH.
+!       LIST,LPTR,LEND = Data structure defining the trian-
+!                        gulation.  Refer to STRIPACK
+!                        Subroutine TRMESH.
 !
 !                    IFLAG - OPTION INDICATOR
 !                            IFLAG = 0 IF INTRC1 IS TO PRO-
@@ -6741,8 +6741,6 @@ END SUBROUTINE getnp
 ! IERR =     ERROR FLAG FOR CALLS TO GRADL
 ! N1,N2 =    INDICES OF THE ENDPOINTS OF A BOUNDARY ARC WHEN
 !              P IS EXTERIOR (NOT CONTAINED IN A TRIANGLE)
-! INDX =     IADJ INDEX OF N2 AS A NEIGHBOR OF N1 OR VICE-
-!              VERSA
 ! P =        CARTESIAN COORDINATES OF P
 ! P1,P2,P3 = CARTESIAN COORDINATES OF THE VERTICES I1, I2,
 !              AND I3, OR (P1 AND P2) COORDINATES OF N1 AND
