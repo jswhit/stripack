@@ -145,14 +145,50 @@ if __name__ == "__main__":
         olats = -90.0 + delta*np.arange(nlats)
         olons = np.radians(olons);  olats = np.radians(olats)
         olons, olats = np.meshgrid(olons, olats)
-        # interpolation
-        order = 1 # can be 0 (nearest neighbor) or 1 (linear)
+        # nearest neighbor interpolation
+        order = 0 # can be 0 (nearest neighbor) or 1 (linear) or 3 (cubic)
         latlon_data = tri.interp(olons,olats,icos_data,order=order)
         # check error
         latlon_datax = test_func(olons,olats)
         err = (np.abs(latlon_datax-latlon_data)).max()
-        print('max abs error %s specified tolerance %s' % (err,tol))
+        print('order = %s: max abs error %s specified tolerance %s' % (order,err,20*tol))
+        assert(err < 20*tol)
+        # test interp_nn alias.
+        latlon_data = tri.interp_nn(olons,olats,icos_data)
+        latlon_datax = test_func(olons,olats)
+        err = (np.abs(latlon_datax-latlon_data)).max()
+        print('order = %s: max abs error %s specified tolerance %s' % (order,err,20*tol))
+        assert(err < 20*tol)
+        # linear interpolation
+        order = 1 # can be 0 (nearest neighbor) or 1 (linear) or 3 (cubic)
+        latlon_data = tri.interp(olons,olats,icos_data,order=order)
+        # check error
+        latlon_datax = test_func(olons,olats)
+        err = (np.abs(latlon_datax-latlon_data)).max()
+        print('order = %s: max abs error %s specified tolerance %s' % (order,err,tol))
         assert(err < tol)
+        # test interp_linear alias
+        latlon_data = tri.interp_linear(olons,olats,icos_data)
+        latlon_datax = test_func(olons,olats)
+        err = (np.abs(latlon_datax-latlon_data)).max()
+        assert(err < tol)
+        print('order = %s: max abs error %s specified tolerance %s' % (order,err,tol))
+        # cubic interpolation
+        order = 3 # can be 0 (nearest neighbor) or 1 (linear) or 3 (cubic)
+        latlon_data = tri.interp(olons,olats,icos_data,order=order)
+        # check error
+        latlon_datax = test_func(olons,olats)
+        err = (np.abs(latlon_datax-latlon_data)).max()
+        print('order = %s: max abs error %s specified tolerance %s' %\
+                (order,err,tol/20.))
+        assert(err < tol/20.)
+        # test interp_cubic alias
+        latlon_data = tri.interp_cubic(olons,olats,icos_data)
+        latlon_datax = test_func(olons,olats)
+        err = (np.abs(latlon_datax-latlon_data)).max()
+        print('order = %s: max abs error %s specified tolerance %s' %\
+                (order,err,tol/20.))
+        assert(err < tol/20.)
     import unittest
     class RegridTest(unittest.TestCase):
         def test(self):
