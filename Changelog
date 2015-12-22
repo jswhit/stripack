@@ -1,7 +1,6 @@
 version 1.1 (not yet released)
 -------------------------------
-* added support for hermite cubic interpolation (about 10x slower than
-  linear).
+* added support for hermite cubic interpolation.
 
 12/20/2015:  version 1.0 release. 
 --------------------------------
