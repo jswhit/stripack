@@ -1,6 +1,6 @@
 Python interface to ACM algorithm 772 (STRIPACK) fortran code for triangulation
-on a sphere.  Includes routines from algorithm 623 for interpolation (both
-nearest neighbor and linear).
+on a sphere.  Includes routines from algorithm 623 for interpolation
+(nearest neighbor, linear and hermite cubic).
 
 to install ([numpy](http://numpy.org) and fortran compiler (preferably 
 [gfortran](https://gcc.gnu.org/wiki/GFortran)) required):
