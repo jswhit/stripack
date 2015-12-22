@@ -5511,7 +5511,7 @@ end
 SUBROUTINE INTERP (N,ORDER,PLAT,PLON,X,Y,Z,W,LIST,LPTR,&
                          LEND, IST, PW, IER)
   integer, intent(in) :: order
-  INTEGER( kind = 4 ) N, LIST(*), LPTR(*), LEND(N), IST, IER
+  INTEGER( kind = 4 ) N, LIST(6*(N-2)),LPTR(6*(N-2)),LEND(N), IST, IER
   REAL( kind = 8 )    PLAT, PLON, X(N), Y(N), Z(N), W(N), PW, GRAD(3,N)
 !
 !***********************************************************
@@ -7122,8 +7122,8 @@ REAL( kind = 8), INTENT(IN OUT)                     :: x(n)
 REAL( kind = 8), INTENT(IN OUT)                     :: y(n)
 REAL( kind = 8), INTENT(IN OUT)                     :: z(n)
 REAL( kind = 8), INTENT(IN)                         :: w(n)
-INTEGER( kind = 4), INTENT(IN OUT)                  :: list(*)
-INTEGER( kind = 4), INTENT(IN OUT)                  :: lptr(*)
+INTEGER( kind = 4), INTENT(IN OUT)                  :: list(6*(n-2))
+INTEGER( kind = 4), INTENT(IN OUT)                  :: lptr(6*(n-2))
 INTEGER( kind = 4), INTENT(IN OUT)                  :: lend(n)
 REAL( kind = 8), INTENT(IN OUT)                     :: g(3)
 INTEGER( kind = 4), INTENT(OUT)                     :: ier
@@ -7206,9 +7206,9 @@ INTEGER( kind = 4), INTENT(OUT)                     :: ier
 
 INTEGER( kind = 4), PARAMETER :: lmn=10
 INTEGER( kind = 4), PARAMETER :: lmx=30
-INTEGER :: i, ierr, im1, ip1, j, jp1, kk, l, lm1, lmax,  &
+INTEGER( kind = 4)  :: i, ierr, im1, ip1, j, jp1, kk, l, lm1, lmax,  &
     lmin, lnp, nn, np, npts(lmx)
-REAL :: a(6,6), av, avsq, c, cx, cy, df, dmin, dtol,  &
+REAL( kind = 8) :: a(6,6), av, avsq, c, cx, cy, df, dmin, dtol,  &
     dx, dy, rf, rin, rtol, s, sf, sum, sx, sy, wk, wt, xp, yp, zp
 
 DATA    rtol/1.e-6/, dtol/.01/, sf/1./
