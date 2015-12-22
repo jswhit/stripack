@@ -4,5 +4,6 @@ include COPYING
 include _stripack.pyf
 include _stripack.f90
 include setup.py
+include stripack.html
 recursive-include stripack *
 recursive-include test *
