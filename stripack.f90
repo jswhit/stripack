@@ -5512,7 +5512,7 @@ SUBROUTINE INTERP (N,ORDER,PLAT,PLON,X,Y,Z,W,LIST,LPTR,&
                          LEND, IST, PW, IER)
   integer, intent(in) :: order
   INTEGER( kind = 4 ) N, LIST(*), LPTR(*), LEND(N), IST, IER
-  REAL( kind = 8 )    PLAT, PLON, X(N), Y(N), Z(N), W(N), PW
+  REAL( kind = 8 )    PLAT, PLON, X(N), Y(N), Z(N), W(N), PW, GRAD(3,N)
 !
 !***********************************************************
 !
@@ -5613,6 +5613,11 @@ SUBROUTINE INTERP (N,ORDER,PLAT,PLON,X,Y,Z,W,LIST,LPTR,&
 ! SUMM =      Quantity used to normalize the barycentric
 !              coordinates
 !
+      if (order == 3) then
+        CALL INTRC1 (N,PLAT,PLON,X,Y,Z,W,LIST,LPTR,LEND, &
+                     0,GRAD, IST, PW,IER)
+        RETURN
+      endif
       IF (N .LT. 3  .OR.  IST .LT. 1  .OR.  IST .GT. N) GO TO 11
 !
 ! Transform (PLAT,PLON) to Cartesian coordinates.
@@ -6618,9 +6623,12 @@ END SUBROUTINE getnp
 !    4 IER = 1
 !      RETURN
 !      END
-      SUBROUTINE INTRC1 (N,PLAT,PLON,X,Y,Z,W,IADJ,IEND, &
+      !SUBROUTINE INTRC1 (N,PLAT,PLON,X,Y,Z,W,IADJ,IEND, &
+      !                   IFLAG,GRAD, IST, PW,IER)
+      SUBROUTINE INTRC1 (N,PLAT,PLON,X,Y,Z,W,LIST,LPTR,LEND, &
                          IFLAG,GRAD, IST, PW,IER)
-      INTEGER( kind = 4) N, IADJ(6*(N-1)), IEND(N), IFLAG, IST, IER
+      !INTEGER( kind = 4) N, IADJ(6*(N-1)), IEND(N), IFLAG, IST, IER
+      INTEGER( kind = 4) N,LIST(6*(N-2)),LPTR(6*(N-2)),LEND(N),IFLAG,IST,IER
       REAL( kind = 8 )    PLAT, PLON, X(N), Y(N), Z(N), W(N), &
               GRAD(3,N), PW
 !
@@ -6719,7 +6727,7 @@ END SUBROUTINE getnp
 !
 !***********************************************************
 !
-      INTEGER( kind = 4) NN, I1, I2, I3, I, IERR, N1, N2, INDX
+      INTEGER( kind = 4) NN, I1, I2, I3, I, IERR, N1, N2
       REAL( kind = 8 )    P(3), P1(3), P2(3), P3(3), W1, W2, W3, G1(3), &
               G2(3), G3(3), B1, B2, B3, SUMM, DUM(3), S12, &
               PTN1, PTN2, Q(3), QNORM, WQ, GQ(3), A, PTGQ, &
@@ -6778,7 +6786,9 @@ END SUBROUTINE getnp
 !
 ! LOCATE P WITH RESPECT TO THE TRIANGULATION
 !
-      CALL TRFIND(IST,P,X,Y,Z,IADJ,IEND, B1,B2,B3,I1,I2,I3)
+      !CALL TRFIND(IST,P,X,Y,Z,IADJ,IEND, B1,B2,B3,I1,I2,I3)
+      CALL TRFIND(IST,P,NN,X,Y,Z,LIST,LPTR,LEND, B1,B2,B3,&
+                  I1,I2,I3)
       IF (I1 .EQ. 0) GO TO 17
       IST = I1
       IF (I3 .EQ. 0) GO TO 4
@@ -6810,11 +6820,14 @@ END SUBROUTINE getnp
 !
 ! COMPUTE GRADIENT ESTIMATES AT THE VERTICES
 !
-    2 CALL GRADL(NN,I1,X,Y,Z,W,IADJ,IEND, G1,IERR)
+!   2 CALL GRADL(NN,I1,X,Y,Z,W,IADJ,IEND, G1,IERR)
+    2 CALL GRADL(NN,I1,X,Y,Z,W,LIST,LPTR,LEND, G1,IERR)
       IF (IERR .LT. 0) GO TO 17
-      CALL GRADL(NN,I2,X,Y,Z,W,IADJ,IEND, G2,IERR)
+!     CALL GRADL(NN,I2,X,Y,Z,W,IADJ,IEND, G2,IERR)
+      CALL GRADL(NN,I2,X,Y,Z,W,LIST,LPTR,LEND, G2,IERR)
       IF (IERR .LT. 0) GO TO 17
-      CALL GRADL(NN,I3,X,Y,Z,W,IADJ,IEND, G3,IERR)
+!     CALL GRADL(NN,I3,X,Y,Z,W,IADJ,IEND, G3,IERR)
+      CALL GRADL(NN,I3,X,Y,Z,W,LIST,LPTR,LEND, G3,IERR)
       IF (IERR .LT. 0) GO TO 17
 !
 ! NORMALIZE THE COORDINATES
@@ -6847,9 +6860,12 @@ END SUBROUTINE getnp
 ! COUNTERCLOCKWISE BOUNDARY TRAVERSAL --
 !   SET N2 TO THE FIRST NEIGHBOR OF N1
 !
-    5 INDX = 1
-      IF (N1 .NE. 1) INDX = IEND(N1-1) + 1
-      N2 = IADJ(INDX)
+!   5 INDX = 1
+!     IF (N1 .NE. 1) INDX = IEND(N1-1) + 1
+!     N2 = IADJ(INDX)
+    5 lp = lend(n1)
+      lp = lptr(lp)
+      n2 = list(lp)
 !
 ! COMPUTE INNER PRODUCTS (N1,N2) AND (P,N2), AND COMPUTE
 !   B2 = DET(P,N1,N2 X N1)
@@ -6874,8 +6890,10 @@ END SUBROUTINE getnp
 !
 ! SET N1 TO THE LAST NEIGHBOR OF N2 AND TEST FOR TERMINATION
 !
-      INDX = IEND(N2) - 1
-      N1 = IADJ(INDX)
+!     INDX = IEND(N2) - 1
+!     N1 = IADJ(INDX)
+      lp = lend(n2)
+      n1 = -list(lp)
       IF (N1 .EQ. I1) GO TO 18
 !
 ! COMPUTE INNER PRODUCTS (N1,N2) AND (P,N1)
@@ -6903,7 +6921,8 @@ END SUBROUTINE getnp
       DO 7 I = 1,3
     7   GQ(I) = GRAD(I,N2)
       GO TO 9
-    8 CALL GRADL(NN,N2,X,Y,Z,W,IADJ,IEND, GQ,IERR)
+!   8 CALL GRADL(NN,N2,X,Y,Z,W,IADJ,IEND, GQ,IERR)
+    8 CALL GRADL(NN,N2,X,Y,Z,W,LIST,LPTR,LEND, GQ,IERR)
       IF (IERR .LT. 0) GO TO 17
 !
 ! EXTRAPOLATE TO P -- PW = WQ + A*(GQ,Q X (PXQ)/SIN(A))
@@ -6949,9 +6968,11 @@ END SUBROUTINE getnp
         G1(I) = GRAD(I,N1)
    13   G2(I) = GRAD(I,N2)
       GO TO 15
-   14 CALL GRADL(NN,N1,X,Y,Z,W,IADJ,IEND, G1,IERR)
+!  14 CALL GRADL(NN,N1,X,Y,Z,W,IADJ,IEND, G1,IERR)
+   14 CALL GRADL(NN,N1,X,Y,Z,W,LIST,LPTR,LEND, G1,IERR)
       IF (IERR .LT. 0) GO TO 17
-      CALL GRADL(NN,N2,X,Y,Z,W,IADJ,IEND, G2,IERR)
+!     CALL GRADL(NN,N2,X,Y,Z,W,IADJ,IEND, G2,IERR)
+      CALL GRADL(NN,N2,X,Y,Z,W,LIST,LPTR,LEND, G2,IERR)
       IF (IERR .LT. 0) GO TO 17
 !
 ! COMPUTE AN INTERPOLATED VALUE AND NORMAL GRADIENT-
