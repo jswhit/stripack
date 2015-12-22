@@ -13,7 +13,7 @@ flags `config_fc --fcompiler=<compiler name>` when setup.py is run
 
 * to run test, execute ``python stripack/__init__.py``
 
-* see source code [docstrings](http://htmlpreview.github.com/?https://github.com/jswhit/stripack/master/stripack.html) for documentation, 
+* see source code [docstrings](http://htmlpreview.github.com/?https://github.com/jswhit/stripack/master/stripack.html){:target="_blank"} for documentation, 
 [``test/fib_test.py``](https://github.com/jswhit/stripack/blob/master/test/fib_test.py) for example usage.
 
 References:
