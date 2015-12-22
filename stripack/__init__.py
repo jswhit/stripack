@@ -65,7 +65,7 @@ The indices are 1-based (as in Fortran), not zero based (as in python).
     def interp(self,olons,olats,data,order=1):
         """
 given a triangulation, perform interpolation on
-oints olons,olats (in radians), return result in data.
+output mesh defined by olons,olats (in radians), return result in data.
 olons, olats can be 1d or 2d (output data array has same shape as olats,lons).
 order of interpolation specified by 'order' kwarg, can be 0 (nearest neighbor),
 1 (linear), or 3 (hermite cubic)."""
