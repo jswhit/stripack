@@ -2,6 +2,8 @@ from numpy.distutils.core  import setup, Extension
 
 # interface for Renka's algorithm 772 fortran code
 ext = Extension(name  = '_stripack',
+                extra_f90_compile_args = ['-fopenmp'],
+                extra_link_args    = ['-fopenmp'],
                 sources       = ['_stripack.pyf','stripack.f90'])
 
 if __name__ == "__main__":

@@ -62,7 +62,7 @@ The indices are 1-based (as in Fortran), not zero based (as in python).
         self.lons = lons; self.lats = lats; self.npts = npts
         self.x = x; self.y = y; self.z = z
         self.lptr = lptr; self.lst = lst; self.lend = lend
-    def interp(self,olons,olats,data,order=1):
+    def interp(self,olons,olats,data,istin=None,order=1):
         """
 given a triangulation, perform interpolation on
 output mesh defined by olons,olats (in radians), return result in data.
@@ -94,25 +94,27 @@ Algorithms:
         if order not in [0,1,3]:
             raise ValueError('order must be 0,1 or 3')
         else:
-            odata,ierr = \
+            if istin is None:
+                istin = -1*np.ones(olats1.shape, np.int32)
+            odata,istout,ierr = \
             _stripack.interp_n(order, olats1, olons1,\
             self.x, self.y, self.z, data.astype(np.float64),\
-            self.lst,self.lptr,self.lend,self.npts,nptso)
+            self.lst,self.lptr,self.lend,istin,self.npts,nptso)
         if ierr != 0:
             raise ValueError('ierr = %s in intrpc0_n' % ierr)
-        return odata.reshape(shapeout)
-    def interp_nn(self,olons,olats,data):
+        return odata.reshape(shapeout),istout
+    def interp_nn(self,olons,olats,data,istin=None):
         """
-same as interp(olons,olats,data,order=0)"""
-        return self.interp(olons,olats,data,order=0)
-    def interp_linear(self,olons,olats,data):
+same as interp(olons,olats,data,istin=istin,order=0)"""
+        return self.interp(olons,olats,data,istin=istin,order=0)
+    def interp_linear(self,olons,olats,data,istin=None):
         """
-same as interp(olons,olats,data,order=1)"""
-        return self.interp(olons,olats,data,order=1)
+same as interp(olons,olats,data,istin=istin,rder=1)"""
+        return self.interp(olons,olats,data,istin=istin,order=1)
     def interp_cubic(self,olons,olats,data):
         """
-same as interp(olons,olats,data,order=3)"""
-        return self.interp(olons,olats,data,order=3)
+same as interp(olons,olats,data,istin=istin,order=3)"""
+        return self.interp(olons,olats,data,istin=istin,order=3)
 
 if __name__ == "__main__":
     # test function.

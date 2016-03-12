@@ -56,12 +56,16 @@ olons, olats = np.meshgrid(olons, olats)
 
 t1 = time.clock()
 order = 1 # can be 0 (nearest neighbor) or 1 (linear)
-latlon_data = tri.interp(olons,olats,icos_data,order=order)
+latlon_data,istout = tri.interp(olons,olats,icos_data,order=order)
+print('interpolation took',time.clock()-t1,' secs')
+t1 = time.clock()
+latlon_data,istout = tri.interp(olons,olats,icos_data,istin=istout,order=order)
 print('interpolation took',time.clock()-t1,' secs')
 
 latlon_datax = test_func(olons,olats)
 print('max abs error:',(np.abs(latlon_datax-latlon_data)).max())
 print('min/max field:',latlon_data.min(), latlon_datax.max())
+raise SystemExit
 
 # make plot on output mesh
 if has_matplotlib:

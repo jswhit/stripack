@@ -20,9 +20,11 @@ python module _stripack ! in
             integer( kind = 4 ) dimension(n), intent(out) :: lend
             integer( kind = 4 ), intent(out) :: ier
         end subroutine trmesh
-        subroutine interp_n(npts,nptso,order,olats,olons,x,y,z,data,lst,lptr,lend,odata,ierr)
+        subroutine interp_n(npts,nptso,order,olats,olons,x,y,z,data,lst,lptr,lend,odata,istin,istout,ierr)
            integer( kind = 4 ), intent(in) :: npts, nptso,order
            integer( kind = 4 ), intent(out) :: ierr
+           integer( kind = 4 ), intent(in), dimension(nptso) :: istin
+           integer( kind = 4 ), intent(out), dimension(nptso) :: istout
            real( kind = 8 ), intent(in), dimension(nptso) :: olats,olons
            real( kind = 8 ), intent(in), dimension(npts) :: x,y,z,data
            real( kind = 8 ), intent(out), dimension(nptso) :: odata

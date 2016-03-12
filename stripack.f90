@@ -7468,29 +7468,54 @@ END SUBROUTINE getnp
       END
 
       subroutine interp_n(npts,nptso,order,olats,olons,x,y,z,datain,lst,&
-                           lptr,lend,odata,ierr)
+                           lptr,lend,odata,istin,istout,ierr)
+      use omp_lib, only: omp_get_num_threads
       integer( kind = 4 ), intent(in) :: npts, nptso, order
       integer( kind = 4 ), intent(out) :: ierr
+      integer( kind = 4 ), intent(in), dimension(nptso) :: istin
+      integer( kind = 4 ), intent(out), dimension(nptso) :: istout
       real( kind = 8 ), intent(in), dimension(nptso) :: olats,olons
       real( kind = 8 ), intent(in), dimension(npts) :: datain,x,y,z
       real( kind = 8 ), intent(out), dimension(nptso) :: odata
       integer( kind = 4 ), intent(in), dimension(npts) :: lend
       integer( kind = 4 ), intent(in), dimension(6*(npts-2)) :: lst,lptr
       integer( kind = 4 ) n,ierr1,ist
-      ist = 1
       ierr = 0
       if (order .ne. 0 .and. order .ne. 1 .and. order .ne. 3) then
          print *,'fatal error: interp order must be 0, 1 or 3'
          stop
       endif
-      do n=1,nptso
-         call interp(npts,order,olats(n),olons(n),x,y,z,datain,lst,lptr,&
-                     lend,ist,odata(n),ierr1)
-         if (ierr1 .ne. 0) then
-           !print *,n,'warning: ierr = ',ierr1,' in interp_n'
-           !print *,olats(n), olons(n), npts
-           !stop
-           ierr = ierr + ierr1
-         endif
-      enddo
+      if (maxval(istin) <= 0) then ! istin not specified
+         ist = 1
+         do n=1,nptso
+            call interp(npts,order,olats(n),olons(n),x,y,z,datain,lst,lptr,&
+                        lend,ist,odata(n),ierr1)
+            if (ierr1 .ne. 0) then
+              !print *,n,'warning: ierr = ',ierr1,' in interp_n'
+              !print *,olats(n), olons(n), npts
+              !stop
+              ierr = ierr + ierr1
+            endif
+            istout(n) = ist
+         enddo
+      else ! istin specified (thread safe)
+!$omp parallel
+         nthreads = omp_get_num_threads()
+!$omp end parallel
+         print *,'using',nthreads,' openmp threads'
+!$omp parallel do private(n,ist,ierr1) reduction(+:ierr)
+         do n=1,nptso
+            ist = istin(n)
+            call interp(npts,order,olats(n),olons(n),x,y,z,datain,lst,lptr,&
+                        lend,ist,odata(n),ierr1)
+            if (ierr1 .ne. 0) then
+              !print *,n,'warning: ierr = ',ierr1,' in interp_n'
+              !print *,olats(n), olons(n), npts
+              !stop
+              ierr = ierr + ierr1
+            endif
+            istout(n) = ist
+         enddo
+!$omp end parallel do
+      endif
       end subroutine interp_n
