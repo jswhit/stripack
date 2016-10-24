@@ -45,6 +45,7 @@ The indices are 1-based (as in Fortran), not zero based (as in python).
             raise ValueError('lons and lats must be 1d')
         lats = lats.astype(np.float64,copy=False)
         lons = lons.astype(np.float64,copy=False)
+        lons = lons.clip(-2.*np.pi,2.*np.pi)
         if (np.abs(lons)).max() > 2.*np.pi:
             msg="lons must be in radians (-2*pi <= lon <= 2*pi)"
             raise ValueError(msg)
