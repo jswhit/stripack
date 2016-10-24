@@ -2,7 +2,11 @@ from netCDF4 import Dataset
 import numpy as np
 import time
 from stripack import trmesh
-from spherical_geometry import vector, great_circle_arc
+try:
+    from spherical_geometry import vector, great_circle_arc
+except ImportError:
+    msg='requires spherical_geometry module from https://github.com/spacetelescope/sphere'
+    raise ImportError(msg)
 
 def _regrid(lons, lats, data, olons, olats, shuffle=False, tri=None):
     """
