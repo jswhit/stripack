@@ -4,7 +4,7 @@ import time
 from stripack import trmesh
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap
-import pygrib
+#import pygrib
 from regrid_mod import fv3_regrid
 
 datafiles = []
@@ -15,7 +15,8 @@ for ntile in range(1,7,1):
 
 nlons = 768; nlats = nlons/2 # T382 gaussian grid
 olons = (360./nlons)*np.arange(nlons)
-olats = pygrib.gaulats(nlats)
+#olats = pygrib.gaulats(nlats)
+olats = -90 + 0.5*(360./nlons) + (360./nlons)*np.arange(nlats)
 
 varname = 'psfc'
 slice_out = np.s_[-1,:,:]

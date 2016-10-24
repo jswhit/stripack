@@ -3,15 +3,16 @@ import numpy as np
 import time
 from stripack import trmesh
 import matplotlib.pyplot as plt
-import pygrib
+#import pygrib
 from mpl_toolkits.basemap import Basemap
 from regrid_mod import mpas_regrid
 
 filename='mpas_restart.nc'
 
 nlons = 768; nlats = nlons/2 # T382 gaussian grid
-olons = (360./nlons)*np.arange(nlons,dtype=np.float)
-olats = pygrib.gaulats(nlats)
+olons = (360./nlons)*np.arange(nlons)
+#olats = pygrib.gaulats(nlats)
+olats = -90 + 0.5*(360./nlons) + (360./nlons)*np.arange(nlats)
 
 varname = 'surface_pressure'
 slice_out = np.s_[-1,...]
