@@ -9,13 +9,10 @@ import cPickle
 res = 96  
 fixfv3 = '/scratch4/NCEPDEV/global/save/glopara/svn/fv3gfs/fix_fv3'
 
-gridspecfiles = []
-for ntile in range(1,7,1):
-    gridspecfiles.append('%s/C%s/C%s_grid_spec.tile%s.nc'% (fixfv3,res,res,ntile))
-
 # test computation of cell centers given cell corners.
 #from spherical_geometry import vector, great_circle_arc
-#for gridspecfile in gridspecfiles:
+#for ntile in range(1,7,1):
+#    gridspecfile = '%s/C%s/C%s_grid_spec.tile%s.nc'% (fixfv3,res,res,ntile)
 #    print 'reading ',gridspecfile
 #    nc = Dataset(gridspecfile)
 #    lonscorner = nc['grid_lon'][:]
@@ -48,7 +45,8 @@ for ntile in range(1,7,1):
 
 # perform triangulation.
 lons = []; lats = []
-for gridspecfile in gridspecfiles:
+for ntile in range(1,7,1):
+    gridspecfile = '%s/C%s/C%s_grid_spec.tile%s.nc'% (fixfv3,res,res,ntile)
     nc = Dataset(gridspecfile)
     lonsmid = nc['grid_lont'][:]
     latsmid = nc['grid_latt'][:]
@@ -85,12 +83,10 @@ datapath = '/scratch3/BMC/gsienkf/whitaker/fv3_ics64'
 date = '2016100100'
 var = 'pressfc'
 ntime = 0
-datafiles = []
-for ntile in range(1,7,1):
-    datafiles.append('%s/C%s_%s/mem001/fv3_history2d.tile%s.nc'% (datapath,res,date,ntile))
 t1 = time.clock()
 data = []
-for datafile in datafiles:
+for ntilee in range(1,7,1):
+    datafile = '%s/C%s_%s/mem001/fv3_history2d.tile%s.nc'% (datapath,res,date,ntile)
     nc = Dataset(datafile)
     data.append(nc[var][ntime,...])
     nc.close()
