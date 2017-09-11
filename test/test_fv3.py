@@ -8,6 +8,10 @@ import cPickle
 
 res = 96  
 fixfv3 = '/scratch4/NCEPDEV/global/save/glopara/svn/fv3gfs/fix_fv3'
+datapath = '/scratch3/BMC/gsienkf/whitaker/fv3_ics64'
+date = '2016100100'
+var = 'pressfc'
+ntime = 0
 
 # test computation of cell centers given cell corners.
 #from spherical_geometry import vector, great_circle_arc
@@ -79,13 +83,9 @@ olons = np.radians(360.*u)
 olats = np.radians((180./np.pi)*np.arccos(2*v-1) - 90.)
 
 # read data from history files.
-datapath = '/scratch3/BMC/gsienkf/whitaker/fv3_ics64'
-date = '2016100100'
-var = 'pressfc'
-ntime = 0
 t1 = time.clock()
 data = []
-for ntilee in range(1,7,1):
+for ntile in range(1,7,1):
     datafile = '%s/C%s_%s/mem001/fv3_history2d.tile%s.nc'% (datapath,res,date,ntile)
     nc = Dataset(datafile)
     data.append(nc[var][ntime,...])
