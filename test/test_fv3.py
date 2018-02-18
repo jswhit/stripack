@@ -7,7 +7,7 @@ import cPickle
 # test fv3 interpolation from native history files to random points.
 
 res = 128 
-fixfv3 = '/scratch4/NCEPDEV/global/save/glopara/svn/fv3gfs/fix_fv3'
+fixfv3 = '/scratch4/NCEPDEV/global/save/glopara/svn/fv3gfs/fix/fix_fv3_gmted2010
 #fixfv3='/lustre/f1/unswept/Jeffrey.S.Whitaker/fv3_reanl/fv3gfs/global_shared.v15.0.0/fix/fix_fv3_gmted2010'
 datapath = '/scratch3/BMC/gsienkf/whitaker/fv3_ics64'
 #datapath = '/lustre/f1/unswept/Jeffrey.S.Whitaker/fv3_reanl/ics'
