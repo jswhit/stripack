@@ -1,12 +1,16 @@
+from __future__ import print_function
 from netCDF4 import Dataset
 import numpy as np
 import time
 from stripack import trmesh
-import cPickle
+try:
+    import cPickle
+except:
+    import _pickle as cPickle
 
 # test fv3 interpolation from native history files to random points.
 
-res = 128 
+res = 128
 fixfv3 = '/scratch4/NCEPDEV/global/save/glopara/svn/fv3gfs/fix/fix_fv3_gmted2010'
 #fixfv3='/lustre/f1/unswept/Jeffrey.S.Whitaker/fv3_reanl/fv3gfs/global_shared.v15.0.0/fix/fix_fv3_gmted2010'
 datapath = '/scratch3/BMC/gsienkf/whitaker/fv3_ics64'
@@ -28,9 +32,9 @@ for ntile in range(1,7,1):
 lons = np.radians(np.array(lons,dtype=np.float64)).ravel()
 lats = np.radians(np.array(lats,dtype=np.float64)).ravel()
 t1 = time.clock()
-print 'triangulation of', len(lons),' points'
+print('triangulation of', len(lons),' points')
 tri = trmesh(lons, lats)
-print 'triangulation took',time.clock()-t1,' secs'
+print('triangulation took',time.clock()-t1,' secs')
 
 # pickle it.
 picklefile = 'C%s_grid.pickle' % res
@@ -38,7 +42,7 @@ cPickle.dump(tri,open(picklefile,'wb'),-1)
 # load from pickle
 t1 = time.clock()
 tri2 = cPickle.load(open(picklefile,'rb'))
-print 'load from pickle file took',time.clock()-t1,' secs'
+print('load from pickle file took',time.clock()-t1,' secs')
 
 # generate random points on a sphere
 # so that every small area on the sphere is expected
@@ -60,10 +64,10 @@ for ntile in range(1,7,1):
     data.append(nc[var][ntime,...])
     nc.close()
 data = (np.array(data,dtype=np.float64)).ravel()
-print 'read %s data from history files took' % var,time.clock()-t1,' secs'
-    
+print('read %s data from history files took' % var,time.clock()-t1,' secs')
+
 # interpolate to random points.
 t1 = time.clock()
 data_interp = tri2.interp_linear(olons,olats,data)
-print 'interpolation %s points took' % npts,time.clock()-t1,' secs'
-print 'min/max interpolated field:',data_interp.min(), data_interp.max()
+print('interpolation %s points took' % npts,time.clock()-t1,' secs')
+print('min/max interpolated field:',data_interp.min(), data_interp.max())
