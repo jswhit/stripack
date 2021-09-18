@@ -64,6 +64,7 @@ The indices are 1-based (as in Fortran), not zero based (as in python).
         self.lons = lons; self.lats = lats; self.npts = npts
         self.x = x; self.y = y; self.z = z
         self.lptr = lptr; self.lst = lst; self.lend = lend
+        self._shuffle=False; self._ix=None
     def interp(self,olons,olats,data,order=1):
         """
 given a triangulation, perform interpolation on
@@ -119,6 +120,9 @@ same as interp(olons,olats,data,order=3)"""
     def interp_latlon(self,nlons,data,order=1,quiet=False):
         """
         nlons:  number of longitudes on output grid
+                (a reg lat/lon grid with nlons longitudes and
+                 nlons/2 latitudes, not including poles or wrap-
+                 around longitude).
         data: 1d array of cubed sphere data
         order: order of interpolation (0 for nearest neighbor, 
                1 for linear, 3 for cubic - default is 1).
@@ -129,16 +133,16 @@ same as interp(olons,olats,data,order=3)"""
         lats2d: 2d array of longitudes on output grid (in degrees)
         latlon_data:  2d array of interpolated data on output grid.
         """
-        # generate regular 2d lat/lon grid (including poles,
-        # but not wrap-around longitude).
+        # generate regular 2d lat/lon grid (not including poles,
+        # or wrap-around longitude).
         nlats = nlons/2
         olons = (360./nlons)*np.arange(nlons)
         olats = -90 + 0.5*(360./nlons) + (360./nlons)*np.arange(nlats)
         olonsd, olatsd = np.meshgrid(olons, olats) # degrees
         # interpolate to the reg lat/lon grid
         if not quiet: t1 = time.time()
-        if tri._shuffle:
-            data = data[tri._ix] # points were randomly shuffled to make triangulation faster
+        if self._shuffle:
+            data = data[self._ix] # points were randomly shuffled to make triangulation faster
         latlon_data = self.interp(np.radians(olonsd),np.radians(olatsd),data,order=order) # expects radians
         if not quiet:
             print('time to interpolate to %s by %s lat/lon grid = %s',
@@ -148,7 +152,7 @@ same as interp(olons,olats,data,order=3)"""
 
 if __name__ == "__main__":
     # test function.
-    def _test(npts=14000,nlons=360,nlats=None,tol=[0.2,1.e-2,None,3.e-3]):
+    def _test(npts=14000,nlons=360,tol=[0.2,1.e-2,None,3.e-3]):
         def fibonacci_pts(npts):
             # return lats and lons of N=npts fibonacci grid on a sphere.
             pi = np.pi
@@ -187,9 +191,9 @@ if __name__ == "__main__":
         assert( np.array_equal(tri.lats, lats) )
         # output mesh
         delta = 360./nlons
+        nlats = nlons/2
         olons = delta*np.arange(nlons)
-        if nlats is None: nlats = nlons/2+1
-        olats = -90.0 + delta*np.arange(nlats)
+        olats = -90 + 0.5*delta + delta*np.arange(nlats)
         olons = np.radians(olons);  olats = np.radians(olats)
         olons, olats = np.meshgrid(olons, olats)
         # nearest neighbor interpolation
@@ -220,6 +224,10 @@ if __name__ == "__main__":
         # test interp_cubic alias
         latlon_data = tri.interp_cubic(olons,olats,icos_data)
         check_err(latlon_data,latlon_datax,order)
+        # check convenience method
+        lons2d, lats2d, latlon_data =\
+        tri.interp_latlon(nlons,icos_data,quiet=True)
+        check_err(latlon_data,latlon_datax,1)
     import unittest
     class RegridTest(unittest.TestCase):
         def test(self):
