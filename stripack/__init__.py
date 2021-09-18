@@ -119,19 +119,19 @@ same as interp(olons,olats,data,order=3)"""
     # convenience function to generate reg lat/lon output grid and do interpolation.
     def interp_latlon(self,nlons,data,order=1,quiet=False):
         """
-        nlons:  number of longitudes on output grid
-                (a reg lat/lon grid with nlons longitudes and
-                 nlons/2 latitudes, not including poles or wrap-
-                 around longitude).
-        data: 1d array of cubed sphere data
-        order: order of interpolation (0 for nearest neighbor, 
-               1 for linear, 3 for cubic - default is 1).
-        quiet: Suppress diagnostic messages (default False)
-    
-        returns lons2d,lats2d,latlon_data where
-        lons2d: 2d array of longitudes on output grid (in degrees)
-        lats2d: 2d array of longitudes on output grid (in degrees)
-        latlon_data:  2d array of interpolated data on output grid.
+nlons:  number of longitudes on output grid
+        (a reg lat/lon grid with nlons longitudes and
+         nlons/2 latitudes, not including poles or wrap-
+         around longitude).
+data: 1d array of cubed sphere data
+order: order of interpolation (0 for nearest neighbor, 
+       1 for linear, 3 for cubic - default is 1).
+quiet: Suppress diagnostic messages (default False)
+
+returns lons2d,lats2d,latlon_data where
+lons2d: 2d array of longitudes on output grid (in degrees)
+lats2d: 2d array of longitudes on output grid (in degrees)
+latlon_data:  2d array of interpolated data on output grid.
         """
         # generate regular 2d lat/lon grid (not including poles,
         # or wrap-around longitude).
