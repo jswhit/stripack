@@ -14,7 +14,8 @@ else:
 fixfv3 = '/scratch1/NCEPDEV/global/glopara/fix_NEW/fix_fv3_gmted2010/'
 
 # perform interpolation of orography using saved triangulation.
-# read data from each of the 6 tile files, append into 1d array
+
+# first read data from each of the 6 tile files, append into 1d array
 data = []
 for ntile in range(1,7,1):
     gridfile = '%s/C%s/C%s_oro_data.tile%s.nc'% (fixfv3,res,res,ntile)
@@ -23,16 +24,19 @@ for ntile in range(1,7,1):
     nc.close()
 data = (np.array(data,dtype=np.float64)).ravel()
 
-# load trmesh object from pickle (pre-generated using generate_mesh.py)
+# then load trmesh object from pickle (pre-generated using generate_mesh.py)
 
 picklefile = 'C%s_grid.pickle' % res
 tri = cPickle.load(open(picklefile,'rb'))
 
-def interp_latlon(nlons,data,tri):
+# convenience function to generate output grid and do interpolation.
+def interp_latlon(nlons,data,tri,order=1):
     '''
     nlons:  number of longitudes on output grid
     data: 1d array of cubed sphere data
     tri: stripack triangulation object for cubed sphere grid
+    order: order of interpolation (0 for nearest neighbor, 
+           1 for linear, 3 for cubic - default is 1).
 
     returns lons2d,lats2d,latlon_data where
     lons2d: 2d array of longitudes on output grid (in degrees)
@@ -45,21 +49,19 @@ def interp_latlon(nlons,data,tri):
     olons = (360./nlons)*np.arange(nlons)
     olats = -90 + 0.5*(360./nlons) + (360./nlons)*np.arange(nlats)
     olonsd, olatsd = np.meshgrid(olons, olats) # degrees
-    olons = np.radians(olons);  olats = np.radians(olats) # radians
-    olons, olats = np.meshgrid(olons, olats)
-    # interpolate linearly to the reg grid
-    # interp_cubic and interp_nn (nearest neighbor) also available
+    # interpolate to the reg lat/lon grid
     t1 = time.time()
     if tri._shuffle:
         data = data[tri._ix] # points were randomly shuffled to make triangulation faster
-    latlon_data = tri.interp_linear(olons,olats,data) # expects radians
+    latlon_data = tri.interp(np.radians(olonsd),np.radians(olatsd),data,order=order) # expects radians
     print('time to interpolation =',time.time()-t1)
     print(latlon_data.shape, latlon_data.min(), latlon_data.max())
     return olonsd,olatsd,latlon_data
 
-lons2d,lats2d,latlon_data = interp_latlon(1440,data,tri)
+# do interpolation.
+lons2d,lats2d,latlon_data = interp_latlon(1440,data,tri) # 1/4 deg output grid
 
-# make a plot
+# make a plot.
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 fig = plt.figure()
