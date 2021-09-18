@@ -81,4 +81,5 @@ if has_matplotlib:
     plt.title('error')
     m.colorbar()
     plt.tight_layout()
+    plt.savefig('fib_test.png')
     plt.show()
