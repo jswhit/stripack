@@ -194,7 +194,7 @@ if __name__ == "__main__":
         # output mesh
         nlats = nlons//2; delta = 360./nlons
         olons = delta*np.arange(nlons)
-        olats = -90. + 0.5*(delta + np.arange(nlats))
+        olats = -90. + delta*(0.5 + np.arange(nlats))
         olons = np.radians(olons);  olats = np.radians(olats)
         olons, olats = np.meshgrid(olons, olats)
         # nearest neighbor interpolation
