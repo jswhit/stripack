@@ -136,7 +136,7 @@ latlon_data:  2d array of interpolated data on output grid.
         """
         # generate regular 2d lat/lon grid (not including poles,
         # or wrap-around longitude).
-        nlats = nlons/2
+        nlats = nlons//2
         olons = (360./nlons)*np.arange(nlons)
         olats = -90 + 0.5*(360./nlons) + (360./nlons)*np.arange(nlats)
         olonsd, olatsd = np.meshgrid(olons, olats) # degrees
@@ -146,8 +146,9 @@ latlon_data:  2d array of interpolated data on output grid.
             data = data[self._ix] # points were randomly shuffled to make triangulation faster
         latlon_data = self.interp(np.radians(olonsd),np.radians(olatsd),data,order=order) # expects radians
         if not quiet:
-            print('time to interpolate to %s by %s lat/lon grid = %s',
-                  (nlons,nlats,time.time()-t1))
+            t = time.time()-t1
+            print('time to interpolate to %s by %s lat/lon grid = %s' %
+                  (nlons,nlats,t))
             print('shape/min/max',latlon_data.shape, latlon_data.min(), latlon_data.max())
         return olonsd,olatsd,latlon_data
 
