@@ -42,10 +42,10 @@ if shuffle:
     lats = lats[ix]; lons = lons[ix]
 icos_data = test_func(lons,lats)
 
-t1 = time.clock()
+t1 = time.time()
 print('triangulation of', len(lons),' points')
 tri = trmesh(lons, lats)
-print('triangulation took',time.clock()-t1,' secs')
+print('triangulation took',time.time()-t1,' secs')
 
 nlons = 1440; nlats = nlons/2 + 1 # 1 degree output mesh
 delta = 360./nlons
@@ -54,10 +54,10 @@ olats = -90.0 + delta*np.arange(nlats)
 olons = np.radians(olons);  olats = np.radians(olats)
 olons, olats = np.meshgrid(olons, olats)
 
-t1 = time.clock()
+t1 = time.time()
 order = 1 # can be 0 (nearest neighbor) or 1 (linear)
 latlon_data = tri.interp(olons,olats,icos_data,order=order)
-print('interpolation took',time.clock()-t1,' secs')
+print('interpolation took',time.time()-t1,' secs')
 
 latlon_datax = test_func(olons,olats)
 print('max abs error:',(np.abs(latlon_datax-latlon_data)).max())
