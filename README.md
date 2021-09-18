@@ -16,6 +16,8 @@ flags `config_fc --fcompiler=<compiler name>` when setup.py is run
 * see source code <a href="http://htmlpreview.github.com/?https://github.com/jswhit/stripack/master/stripack.html" target="_blank">docstrings</a> for documentation, 
 [``test/fib_test.py``](https://github.com/jswhit/stripack/blob/master/test/fib_test.py) for example usage.
 
+* see sample codes in 'FV3' directory for applications to FV3 cubed sphere grids.
+
 References:
 
  R. J. Renka, "ALGORITHM 623:  Interpolation on the Surface of a
