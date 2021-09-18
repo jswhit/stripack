@@ -131,14 +131,14 @@ quiet: Suppress diagnostic messages (default False)
 
 returns lons2d,lats2d,latlon_data where
 lons2d: 2d array of longitudes on output grid (in degrees)
-lats2d: 2d array of longitudes on output grid (in degrees)
+lats2d: 2d array of latiitudes on output grid (in degrees)
 latlon_data:  2d array of interpolated data on output grid.
         """
         # generate regular 2d lat/lon grid (not including poles,
         # or wrap-around longitude).
-        nlats = nlons//2
-        olons = (360./nlons)*np.arange(nlons)
-        olats = -90 + 0.5*(360./nlons) + (360./nlons)*np.arange(nlats)
+        nlats = nlons/2; delta = 360./nlons
+        olons = delta*np.arange(nlons)
+        olats = -90. + delta*(0.5 + np.arange(nlats))
         olonsd, olatsd = np.meshgrid(olons, olats) # degrees
         # interpolate to the reg lat/lon grid
         if not quiet: t1 = time.time()
@@ -192,10 +192,9 @@ if __name__ == "__main__":
         assert( np.array_equal(tri.lons, lons) )
         assert( np.array_equal(tri.lats, lats) )
         # output mesh
-        delta = 360./nlons
-        nlats = nlons/2
+        nlats = nlons//2; delta = 360./nlons
         olons = delta*np.arange(nlons)
-        olats = -90 + 0.5*delta + delta*np.arange(nlats)
+        olats = -90. + delta*(0.5 + np.arange(nlats))
         olons = np.radians(olons);  olats = np.radians(olats)
         olons, olats = np.meshgrid(olons, olats)
         # nearest neighbor interpolation
