@@ -24,7 +24,7 @@ for ntile in range(1,7,1):
     nc.close()
 data = (np.array(data,dtype=np.float64)).ravel()
 
-# then load trmesh object from pickle (pre-generated using generate_mesh.py)
+# then load trmesh object from pickle (pre-generated using generate_fv3mesh.py)
 
 picklefile = 'C%s_grid.pickle' % res
 tri = cPickle.load(open(picklefile,'rb'))
