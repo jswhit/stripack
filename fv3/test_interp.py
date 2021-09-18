@@ -29,37 +29,8 @@ data = (np.array(data,dtype=np.float64)).ravel()
 picklefile = 'C%s_grid.pickle' % res
 tri = cPickle.load(open(picklefile,'rb'))
 
-# convenience function to generate output grid and do interpolation.
-def interp_latlon(nlons,data,tri,order=1):
-    '''
-    nlons:  number of longitudes on output grid
-    data: 1d array of cubed sphere data
-    tri: stripack triangulation object for cubed sphere grid
-    order: order of interpolation (0 for nearest neighbor, 
-           1 for linear, 3 for cubic - default is 1).
-
-    returns lons2d,lats2d,latlon_data where
-    lons2d: 2d array of longitudes on output grid (in degrees)
-    lats2d: 2d array of longitudes on output grid (in degrees)
-    latlon_data:  2d array of interpolated data on output grid.
-    '''
-    # generate regular 2d lat/lon grid (including poles,
-    # but not wrap-around longitude).
-    nlats = nlons/2 
-    olons = (360./nlons)*np.arange(nlons)
-    olats = -90 + 0.5*(360./nlons) + (360./nlons)*np.arange(nlats)
-    olonsd, olatsd = np.meshgrid(olons, olats) # degrees
-    # interpolate to the reg lat/lon grid
-    t1 = time.time()
-    if tri._shuffle:
-        data = data[tri._ix] # points were randomly shuffled to make triangulation faster
-    latlon_data = tri.interp(np.radians(olonsd),np.radians(olatsd),data,order=order) # expects radians
-    print('time to interpolation =',time.time()-t1)
-    print(latlon_data.shape, latlon_data.min(), latlon_data.max())
-    return olonsd,olatsd,latlon_data
-
 # do interpolation.
-lons2d,lats2d,latlon_data = interp_latlon(1440,data,tri) # 1/4 deg output grid
+lons2d,lats2d,latlon_data = tri.interp_latlon(1440,data) # 1/4 deg output grid
 
 # make a plot.
 import cartopy.crs as ccrs

@@ -1,7 +1,8 @@
 import  _stripack
+import time
 import numpy as np
 
-__version__ = "1.1"
+__version__ = "1.2"
 
 class trmesh(object):
     def __init__(self, lons, lats):
@@ -114,6 +115,36 @@ same as interp(olons,olats,data,order=1)"""
         """
 same as interp(olons,olats,data,order=3)"""
         return self.interp(olons,olats,data,order=3)
+    # convenience function to generate reg lat/lon output grid and do interpolation.
+    def interp_latlon(self,nlons,data,order=1,quiet=False):
+        """
+        nlons:  number of longitudes on output grid
+        data: 1d array of cubed sphere data
+        order: order of interpolation (0 for nearest neighbor, 
+               1 for linear, 3 for cubic - default is 1).
+        quiet: Suppress diagnostic messages (default False)
+    
+        returns lons2d,lats2d,latlon_data where
+        lons2d: 2d array of longitudes on output grid (in degrees)
+        lats2d: 2d array of longitudes on output grid (in degrees)
+        latlon_data:  2d array of interpolated data on output grid.
+        """
+        # generate regular 2d lat/lon grid (including poles,
+        # but not wrap-around longitude).
+        nlats = nlons/2
+        olons = (360./nlons)*np.arange(nlons)
+        olats = -90 + 0.5*(360./nlons) + (360./nlons)*np.arange(nlats)
+        olonsd, olatsd = np.meshgrid(olons, olats) # degrees
+        # interpolate to the reg lat/lon grid
+        if not quiet: t1 = time.time()
+        if tri._shuffle:
+            data = data[tri._ix] # points were randomly shuffled to make triangulation faster
+        latlon_data = self.interp(np.radians(olonsd),np.radians(olatsd),data,order=order) # expects radians
+        if not quiet:
+            print('time to interpolate to %s by %s lat/lon grid = %s',
+                  (nlons,nlats,time.time()-t1))
+            print('shape/min/max',latlon_data.shape, latlon_data.min(), latlon_data.max())
+        return olonsd,olatsd,latlon_data
 
 if __name__ == "__main__":
     # test function.
