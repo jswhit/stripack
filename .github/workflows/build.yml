@@ -1,0 +1,39 @@
+name: Build and Test Linux
+on: [push, pull_request]
+jobs:
+  build-linux:
+    name: Python (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.7", "3.8", "3.9"]
+    steps:
+
+    - uses: actions/checkout@v2
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install Ubuntu Dependencies
+      run: |
+        sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+        sudo apt-get update -qq
+        sudo apt-get install gfortran
+
+    - name: Update Pip
+      run: |
+        python -m pip install --upgrade pip
+
+    - name: Install python dependencies via pip
+      run: |
+        python -m pip install numpy
+
+    - name: Install package
+      run: |
+        python setup.py install
+
+    - name: Test
+      run: |
+        python stripack/__init__.py
