@@ -28,27 +28,41 @@ data = (np.array(data,dtype=np.float64)).ravel()
 picklefile = 'C%s_grid.pickle' % res
 tri = cPickle.load(open(picklefile,'rb'))
 
-# generate regular 2d 0.25deg lat/lon grid
-nlons = 1440; nlats = nlons/2 
-olons = (360./nlons)*np.arange(nlons)
-olats = -90 + 0.5*(360./nlons) + (360./nlons)*np.arange(nlats)
-olonsd, olatsd = np.meshgrid(olons, olats) # degrees
-olons = np.radians(olons);  olats = np.radians(olats) # radians
-olons, olats = np.meshgrid(olons, olats)
+def interp_latlon(nlons,data,tri):
+    '''
+    nlons:  number of longitudes on output grid
+    data: 1d array of cubed sphere data
+    tri: stripack triangulation object for cubed sphere grid
 
-# interpolate linearly to the reg grid
-# interp_cubic and interp_nn (nearest neighbor) also available
-t1 = time.time()
-if tri._shuffle:
-    data = data[tri._ix] # points were randomly shuffled to make triangulation faster
-latlon_data = tri.interp_linear(olons,olats,data) # expects radians
-print('time to interpolation =',time.time()-t1)
-print(latlon_data.shape, latlon_data.min(), latlon_data.max())
+    returns lons2d,lats2d,latlon_data where
+    lons2d: 2d array of longitudes on output grid (in degrees)
+    lats2d: 2d array of longitudes on output grid (in degrees)
+    latlon_data:  2d array of interpolated data on output grid.
+    '''
+    # generate regular 2d lat/lon grid (including poles,
+    # but not wrap-around longitude).
+    nlats = nlons/2 
+    olons = (360./nlons)*np.arange(nlons)
+    olats = -90 + 0.5*(360./nlons) + (360./nlons)*np.arange(nlats)
+    olonsd, olatsd = np.meshgrid(olons, olats) # degrees
+    olons = np.radians(olons);  olats = np.radians(olats) # radians
+    olons, olats = np.meshgrid(olons, olats)
+    # interpolate linearly to the reg grid
+    # interp_cubic and interp_nn (nearest neighbor) also available
+    t1 = time.time()
+    if tri._shuffle:
+        data = data[tri._ix] # points were randomly shuffled to make triangulation faster
+    latlon_data = tri.interp_linear(olons,olats,data) # expects radians
+    print('time to interpolation =',time.time()-t1)
+    print(latlon_data.shape, latlon_data.min(), latlon_data.max())
+    return olonsd,olatsd,latlon_data
+
+lons2d,lats2d,latlon_data = interp_latlon(1440,data,tri)
 
 # make a plot
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 fig = plt.figure()
 ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=0))
-ax.contourf(olonsd,olatsd,latlon_data,15)
+ax.contourf(lons2d,lats2d,latlon_data,15)
 plt.savefig('test_interp.png')
