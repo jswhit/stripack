@@ -116,9 +116,10 @@ same as interp(olons,olats,data,order=1)"""
         """
 same as interp(olons,olats,data,order=3)"""
         return self.interp(olons,olats,data,order=3)
-    # convenience function to generate reg lat/lon output grid and do interpolation.
     def interp_latlon(self,nlons,data,order=1,quiet=False):
         """
+convenience method to generate a reg lat/lon output grid and do interpolation.
+
 nlons:  number of longitudes on output grid
         (a reg lat/lon grid with nlons longitudes and
          nlons/2 latitudes, not including poles or wrap-
