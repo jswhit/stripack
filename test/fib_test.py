@@ -1,4 +1,3 @@
-from __future__ import print_function
 try:
     import matplotlib.pyplot as plt
     from mpl_toolkits.basemap import Basemap
