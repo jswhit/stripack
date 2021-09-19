@@ -17,7 +17,7 @@ flags `config_fc --fcompiler=<compiler name>` when setup.py is run
 for documentation,
 [``test/fib_test.py``](https://github.com/jswhit/stripack/blob/master/test/fib_test.py) for example usage.
 
-* see sample codes in ``fv3`` and ``mom6`` directory for applications to FV3 and MOM6 grids.
+* see sample codes in ``fv3`` and ``mom6`` directories for applications to FV3 and MOM6 grids.
 
 References:
 
