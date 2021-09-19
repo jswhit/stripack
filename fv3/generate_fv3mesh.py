@@ -1,7 +1,7 @@
 from __future__ import print_function
 from netCDF4 import Dataset
 import numpy as np
-import time, sys
+import sys
 from stripack import trmesh
 import _pickle as cPickle
 
