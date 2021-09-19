@@ -26,9 +26,17 @@ data = (np.asarray(data,dtype=np.float64)).ravel()
 picklefile = 'mom6_mx%s_grid.pickle' % res
 tri = cPickle.load(open(picklefile,'rb'))
 
-# do interpolation.
-lons2d,lats2d,latlon_data = tri.interp_latlon(1440,data,order=0) # 1/4 deg output grid
-latlon_data = np.ma.masked_less(latlon_data,-1.e30)
+# do interpolation (nearest neighbor).
+# 1/4 deg output grid.
+lons2d,lats2d,latlon_data_nn = tri.interp_latlon(1440,data,order=0) 
+latlon_data_nn = np.ma.masked_less(latlon_data_nn,-1.e10)
+# do interpolation (bilinear)
+lons2d,lats2d,latlon_data_lin = tri.interp_latlon(1440,data,order=1) 
+latlon_data_lin = np.ma.masked_less(latlon_data_lin,-1.e10)
+# combine (use un-masked bilinear points, with nearest neighbor mask)
+latlon_data = latlon_data_nn
+ix = latlon_data_lin.mask == False
+latlon_data[ix] = latlon_data_lin[ix]
 
 # make a plot.
 import cartopy.crs as ccrs
