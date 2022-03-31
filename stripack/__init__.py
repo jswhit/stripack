@@ -97,6 +97,8 @@ Algorithms:
         if order not in [0,1,3]:
             raise ValueError('order must be 0,1 or 3')
         else:
+            if self._shuffle:
+                data = data[self._ix] # points were randomly shuffled to make triangulation faster
             odata,ierr = \
             _stripack.interp_n(order, olats1, olons1,\
             self.x, self.y, self.z, data.astype(np.float64),\
@@ -142,8 +144,6 @@ latlon_data:  2d array of interpolated data on output grid.
         olonsd, olatsd = np.meshgrid(olons, olats) # degrees
         # interpolate to the reg lat/lon grid
         if not quiet: t1 = time.time()
-        if self._shuffle:
-            data = data[self._ix] # points were randomly shuffled to make triangulation faster
         latlon_data = self.interp(np.radians(olonsd),np.radians(olatsd),data,order=order) # expects radians
         if not quiet:
             t = time.time()-t1
